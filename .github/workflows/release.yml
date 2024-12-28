@@ -5,12 +5,17 @@ on:
     tags:
       - 'v*' # 当推送 v 开头的标签时触发
 
+permissions:
+  contents: write # 添加写入权限
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # 获取完整的 git 历史用于生成更新日志
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
