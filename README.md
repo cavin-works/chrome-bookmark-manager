@@ -12,6 +12,7 @@
 - 🖼️ 高清图标：自动获取网站的高清图标
 - 📱 响应式设计：完美适配各种屏幕尺寸
 - 📚 自动同步chrome书签：自动同步chrome书签，无需手动导入
+- 🚀 自动发布：使用 GitHub Actions 自动构建和发布新版本
 
 ## 效果展示
 
@@ -62,15 +63,42 @@
    - 点击"加载已解压的扩展程序"
    - 选择项目的 `dist` 目录
 
-## 版本更新
+## 版本发布
 
-### 自动更新
-- 访问 [Releases](https://github.com/cavin-works/chrome-bookmark-manager/releases) 页面
-- 下载最新版本
-- 按照安装步骤重新安装即可
+本项目使用 GitHub Actions 自动构建和发布新版本。
 
-### 手动构建
-如果你想自己构建最新版本：
+### 发布新版本
+
+1. 更新版本号：
+   ```bash
+   # 修改 manifest.json 中的 version 字段
+   git add manifest.json
+   git commit -m "chore: bump version to x.x.x"
+   ```
+
+2. 创建新标签：
+   ```bash
+   git tag -a vx.x.x -m "Release version x.x.x"
+   git push origin vx.x.x
+   ```
+
+3. 自动发布流程：
+   - GitHub Actions 会自动触发构建
+   - 构建完成后自动创建 Release
+   - 自动生成更新日志
+   - 自动上传构建文件
+
+### 手动更新
+
+如果你想手动更新到最新版本：
+
+1. 访问 [Releases](https://github.com/cavin-works/chrome-bookmark-manager/releases) 页面
+2. 下载最新版本
+3. 按照安装步骤重新安装
+
+### 开发版本
+
+如果你想使用最新的开发版本：
 
 1. 拉取最新代码：
    ```bash
@@ -105,6 +133,7 @@
 - Chrome Extension API
 - CSS3 (现代布局和动画)
 - 原生 JavaScript DOM 操作
+- GitHub Actions (CI/CD)
 
 ## 贡献指南
 
