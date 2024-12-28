@@ -1,0 +1,17 @@
+{
+    "name": "chrome-bookmark-manager",
+    "version": "1.0.0",
+    "description": "Chrome书签管理器",
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc -w",
+        "clean": "rm -rf dist",
+        "copy-assets": "cp src/navigation.html dist/ && cp -r src/styles dist/ && cp manifest.json dist/ && cp -r icons dist/ && mkdir -p dist/js && cp src/js/background.js dist/js/ && cp src/js/popup.js dist/js/",
+        "build:all": "npm run clean && npm run build && npm run copy-assets",
+        "pack": "npm run build:all && zip -r chrome-bookmark-manager.zip dist icons manifest.json README.md LICENSE",
+        "pack:clean": "rm -f chrome-bookmark-manager.zip"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3"
+    }
+}

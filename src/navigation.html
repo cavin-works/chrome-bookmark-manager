@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>书签管理器</title>
+    <link rel="stylesheet" href="styles/navigation.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="search-bar">
+                <input type="text" placeholder="搜索书签..." id="searchInput">
+            </div>
+            <div class="toolbar">
+                <button id="darkModeToggle" title="切换暗黑模式">🌓</button>
+                <button id="refreshButton" title="刷新">🔄</button>
+                <button id="addButton" title="添加书签">➕</button>
+                <button id="addFolderButton" title="新建文件夹">📁</button>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="folder-list" id="folderList">
+                <div class="drag-hint">将书签拖放到文件夹中进行移动</div>
+            </div>
+            <div class="bookmarks-container">
+                <h2 id="currentFolderTitle">全部书签</h2>
+                <div id="bookmarksContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加书签对话框 -->
+    <div id="addBookmarkDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>添加书签</h3>
+            <div class="form-group">
+                <label for="bookmarkTitle">标题</label>
+                <input type="text" id="bookmarkTitle" required>
+            </div>
+            <div class="form-group">
+                <label for="bookmarkUrl">网址</label>
+                <input type="url" id="bookmarkUrl" required>
+            </div>
+            <div class="form-group">
+                <label for="bookmarkFolder">文件夹</label>
+                <select id="bookmarkFolder">
+                    <!-- 文件夹选项将通过 JavaScript 动态生成 -->
+                </select>
+            </div>
+            <div class="dialog-buttons">
+                <button id="saveBookmark" class="primary">保存</button>
+                <button id="cancelBookmark">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加文件夹对话框 -->
+    <div id="addFolderDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>新建文件夹</h3>
+            <div class="form-group">
+                <label for="folderName">文件夹名称</label>
+                <input type="text" id="folderName" placeholder="请输入文件夹名称">
+            </div>
+            <div class="form-group">
+                <label for="parentFolder">父文件夹</label>
+                <select id="parentFolder">
+                    <!-- 选项将由 JavaScript 动态填充 -->
+                </select>
+            </div>
+            <div class="dialog-buttons">
+                <button id="cancelFolder">取消</button>
+                <button id="saveFolder" class="primary">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navigation.js"></script>
+</body>
+</html>
