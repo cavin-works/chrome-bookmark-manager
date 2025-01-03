@@ -12,6 +12,7 @@
     --spacing: 16px;
     --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     --hover-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    --accent-color: var(--primary-color);
 }
 
 /* 深色模式 */
@@ -25,6 +26,7 @@
         --text-color: #e0e0e0;
         --background-color: #1e1e1e;
         --secondary-text-color: #999;
+        --accent-color: var(--primary-color);
     }
 }
 
@@ -146,39 +148,313 @@ body {
     overflow-y: auto;
     padding: var(--spacing);
     background-color: var(--background-color);
+    position: relative;
+}
+
+.folder-list {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.folder-item:first-child {
+    margin-top: 0;
+}
+
+.folder-item:last-child {
+    margin-bottom: 0;
 }
 
 .folder-item {
+    position: relative;
     display: flex;
     align-items: center;
-    padding: 8px 12px;
-    cursor: grab;
-    border-radius: 6px;
-    margin: 2px 0;
+    padding: 12px 16px;
+    margin: 4px 0;
+    cursor: pointer;
     transition: all 0.2s ease;
-    position: relative;
-    min-height: 36px;
-    border: 1px solid transparent;
+    user-select: none;
+    border-radius: 8px;
 }
 
-.folder-item:active {
+/* 拖拽相关样式 */
+.folder-item.dragging {
+    opacity: 0.7;
+    background-color: var(--hover-color);
     cursor: grabbing;
+    transform: scale(1.02);
+    box-shadow: var(--hover-shadow);
+}
+
+/* 插入线样式 */
+.folder-item.insert-before::before,
+.folder-item.insert-after::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.folder-item.insert-before::before {
+    top: 0;
+}
+
+.folder-item.insert-after::after {
+    bottom: 0;
+}
+
+/* 插入线动画效果 */
+.folder-item.insert-before::before,
+.folder-item.insert-after::after {
+    animation: insertLineAppear 0.15s ease-out;
+}
+
+@keyframes insertLineAppear {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
+/* 暗黑模式适配 */
+.dark-mode .folder-item.insert-before::before,
+.dark-mode .folder-item.insert-after::after {
+    box-shadow: 0 0 8px var(--accent-color),
+                0 0 16px var(--accent-color);
+    opacity: 0.95;
+}
+
+/* 拖拽时的文件夹列表样式 */
+.folder-list.drag-active .folder-item:not(.dragging):hover {
+    background-color: var(--hover-color);
+}
+
+/* 暗黑模式适配 */
+.dark-mode .folder-item.insert-before::before,
+.dark-mode .folder-item.insert-after::after {
+    box-shadow: 0 0 12px rgba(100, 181, 246, 0.5);
+}
+
+/* 拖拽时的文件夹样式 */
+.folder-item.dragging {
+    background-color: var(--hover-color);
+    box-shadow: var(--hover-shadow);
+    transform: scale(1.02);
+    opacity: 0.8;
+}
+
+/* 拖拽提示 */
+.drag-hint {
+    display: none;
+    padding: 16px;
+    text-align: center;
+    color: var(--secondary-text-color);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    margin: 8px 0;
+    font-size: 13px;
+    background-color: var(--hover-color);
+    transition: all 0.3s ease;
+}
+
+.folder-list.drag-active .drag-hint {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.folder-item.drag-before {
+    position: relative;
+    margin-top: 20px;
+}
+
+.folder-item.drag-after {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.folder-item.drag-before::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--primary-color) 20%,
+        var(--primary-color) 80%,
+        transparent 100%
+    );
+    box-shadow: 0 0 10px var(--primary-color);
+    animation: glow 1.5s ease-in-out infinite alternate;
+    z-index: 10;
+}
+
+.folder-item.drag-after::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--primary-color) 20%,
+        var(--primary-color) 80%,
+        transparent 100%
+    );
+    box-shadow: 0 0 10px var(--primary-color);
+    animation: glow 1.5s ease-in-out infinite alternate;
+    z-index: 10;
+}
+
+@keyframes glow {
+    from {
+        opacity: 0.7;
+        box-shadow: 0 0 5px var(--primary-color);
+    }
+    to {
+        opacity: 1;
+        box-shadow: 0 0 15px var(--primary-color);
+    }
+}
+
+/* 拖拽目标样式 */
+.folder-item.drag-over {
+    background-color: var(--active-color);
+    border: 2px dashed var(--primary-color);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+/* 暗黑模式适配 */
+.dark-mode .folder-item.drag-before::before,
+.dark-mode .folder-item.drag-after::after {
+    box-shadow: 0 0 10px rgba(100, 181, 246, 0.7);
+}
+
+.dark-mode .folder-item.dragging {
+    background-color: var(--hover-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 拖拽时禁用其他悬停效果 */
+.folder-item.dragging:hover,
+.folder-item.drag-before:hover,
+.folder-item.drag-after:hover {
+    transform: none;
+    background-color: var(--background-color);
+}
+
+.folder-item.drag-before:hover .folder-icon,
+.folder-item.drag-after:hover .folder-icon,
+.folder-item.dragging:hover .folder-icon {
+    transform: none;
+}
+
+.folder-item.drag-before:hover .folder-name,
+.folder-item.drag-after:hover .folder-name,
+.folder-item.dragging:hover .folder-name {
+    transform: none;
+}
+
+.folder-item.drag-over {
+    background-color: var(--active-color);
+    border: 2px dashed var(--primary-color);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+    margin: 4px 0;
+}
+
+/* 暗黑模式适配 */
+.dark-mode .folder-item.drag-before::before,
+.dark-mode .folder-item.drag-after::after {
+    opacity: 0.15;
+}
+
+.dark-mode .folder-item.dragging {
+    background-color: var(--hover-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 拖拽动画 */
+@keyframes insertBefore {
+    from {
+        transform: scaleY(0);
+    }
+    to {
+        transform: scaleY(1);
+    }
+}
+
+@keyframes insertAfter {
+    from {
+        transform: scaleY(0);
+    }
+    to {
+        transform: scaleY(1);
+    }
+}
+
+.folder-item.drag-before::before,
+.folder-item.drag-after::after {
+    animation: insertBefore 0.2s ease;
+    transform-origin: top;
+}
+
+.folder-item.drag-after::after {
+    animation: insertAfter 0.2s ease;
+    transform-origin: bottom;
 }
 
 .folder-item:hover {
     background-color: var(--hover-color);
+    transform: translateX(2px);
+}
+
+.folder-item:active {
+    transform: translateX(0);
 }
 
 .folder-item.active {
     background-color: var(--active-color);
     color: var(--active-text-color);
     font-weight: 500;
+    transform: none;
+}
+
+.folder-item.active:hover {
+    background-color: var(--active-color);
+    opacity: 0.95;
 }
 
 .folder-icon {
-    margin-right: 10px;
-    font-size: 16px;
+    margin-right: 12px;
+    font-size: 18px;
     opacity: 0.8;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.folder-item:hover .folder-icon {
+    transform: scale(1.1);
+    opacity: 1;
 }
 
 .folder-name {
@@ -186,35 +462,82 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: transform 0.2s ease;
+}
+
+.folder-item:hover .folder-name {
+    transform: translateX(2px);
 }
 
 .folder-actions {
     display: none;
     position: absolute;
-    right: 8px;
-    gap: 4px;
+    right: 12px;
+    gap: 6px;
+    background: linear-gradient(to left, var(--background-color) 70%, transparent);
+    padding-left: 20px;
 }
 
 .folder-item:hover .folder-actions {
     display: flex;
+    animation: fadeIn 0.2s ease;
 }
 
 .folder-actions button {
-    padding: 4px;
+    padding: 6px;
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     opacity: 0.7;
-    border-radius: 4px;
+    border-radius: 6px;
     color: var(--text-color);
+    transition: all 0.2s ease;
 }
 
 .folder-actions button:hover {
     opacity: 1;
     background-color: var(--hover-color);
+    transform: scale(1.1);
+}
+
+/* 拖拽状态下的样式 */
+.folder-item.drag-over {
+    background-color: var(--active-color);
+    border: 2px dashed var(--primary-color);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+    margin: 4px 0;
+}
+
+.folder-item.drag-over .folder-icon,
+.folder-item.drag-over .folder-name {
     color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.folder-item.drag-over::after {
+    content: '拖放到此处';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--primary-color);
+    opacity: 0.8;
+    pointer-events: none;
+    animation: fadeIn 0.2s ease;
+}
+
+/* 暗黑模式适配 */
+.dark-mode .folder-actions {
+    background: linear-gradient(to left, var(--background-color) 70%, transparent);
+}
+
+.dark-mode .folder-item.drag-over {
+    box-shadow: 0 4px 12px rgba(100, 181, 246, 0.3);
 }
 
 /* 书签容器 */
@@ -467,16 +790,80 @@ body {
 }
 
 /* 拖拽相关样式 */
+.folder-item {
+    position: relative;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
 .folder-item.drag-over {
     background-color: var(--active-color);
     border: 2px dashed var(--primary-color);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+.folder-item.drag-over::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg,
+        var(--primary-color) 0%,
+        transparent 20%,
+        transparent 80%,
+        var(--primary-color) 100%
+    );
+    opacity: 0.2;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: borderRotate 2s linear infinite;
+}
+
+.folder-item.drag-over::after {
+    content: '拖放到此处';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--primary-color);
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.folder-item.drag-over .folder-icon,
+.folder-item.drag-over .folder-name {
+    color: var(--primary-color);
+    transform: scale(1.05);
 }
 
 .bookmark-card.dragging {
     opacity: 0.5;
     cursor: grabbing;
+    transform: scale(1.02);
+    box-shadow: var(--hover-shadow);
 }
 
+@keyframes borderRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* 暗黑模式下的拖拽效果 */
+.dark-mode .folder-item.drag-over {
+    box-shadow: 0 4px 12px rgba(100, 181, 246, 0.3);
+}
+
+.dark-mode .folder-item.drag-over::before {
+    opacity: 0.15;
+}
+
+/* 拖拽提示 */
 .drag-hint {
     display: none;
     padding: 16px;
@@ -486,10 +873,80 @@ body {
     border-radius: 8px;
     margin: 8px 0;
     font-size: 13px;
+    background-color: var(--hover-color);
+    transition: all 0.3s ease;
 }
 
 .folder-list.drag-active .drag-hint {
     display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 书签移动动画 */
+.bookmark-card.moving {
+    animation: moveOut 0.3s ease forwards;
+}
+
+@keyframes moveOut {
+    0% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8) translateY(-20px);
+        opacity: 0;
+    }
+}
+
+/* 文件夹拖拽反馈 */
+.folder-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.folder-item.drag-over::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, var(--active-color) 0%, transparent 70%);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+}
+
+/* 暗黑模式下的动画效果 */
+.dark-mode .folder-item.drag-over::before {
+    background: radial-gradient(circle at center, var(--active-color) 0%, transparent 70%);
+    opacity: 0.3;
 }
 
 /* 暗黑模式样式 */
@@ -817,4 +1274,64 @@ body {
     border: 1px dashed var(--border-color);
     border-radius: 8px;
     margin: 16px;
+}
+
+/* 书签移动动画 */
+.bookmark-card {
+    transition: all 0.2s ease;
+}
+
+.bookmark-card.moving {
+    animation: moveOut 0.3s ease forwards;
+}
+
+@keyframes moveOut {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+}
+
+/* 文件夹拖拽反馈 */
+.folder-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.folder-item.drag-over::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, var(--active-color) 0%, transparent 70%);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+}
+
+/* 暗黑模式下的动画效果 */
+.dark-mode .folder-item.drag-over::before {
+    background: radial-gradient(circle at center, var(--active-color) 0%, transparent 70%);
+    opacity: 0.3;
 }

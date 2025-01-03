@@ -75,6 +75,28 @@
         </div>
     </div>
 
+    <!-- 编辑文件夹对话框 -->
+    <div id="editFolderDialog" class="dialog">
+        <div class="dialog-content">
+            <h3>编辑文件夹</h3>
+            <div class="form-group">
+                <label for="editFolderName">文件夹名称</label>
+                <input type="text" id="editFolderName" placeholder="请输入文件夹名称">
+            </div>
+            <div class="form-group">
+                <label for="editParentFolder">父文件夹</label>
+                <select id="editParentFolder">
+                    <!-- 选项将由 JavaScript 动态填充 -->
+                </select>
+            </div>
+            <input type="hidden" id="editFolderId">
+            <div class="dialog-buttons">
+                <button id="cancelEditFolder">取消</button>
+                <button id="saveEditFolder" class="primary">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/navigation.js"></script>
 </body>
 </html>
