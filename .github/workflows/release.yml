@@ -39,10 +39,8 @@ jobs:
           zip -r ../chrome-bookmark-manager-${{ env.VERSION }}.zip *
           cd ..
 
-      - name: Setup Chrome
-        uses: browser-actions/setup-chrome@latest
-        with:
-          chrome-version: stable
+      - name: Install chrome-extension-cli
+        run: npm install -g chrome-extension-cli
 
       - name: Generate private key
         run: |
@@ -52,9 +50,10 @@ jobs:
 
       - name: Package CRX
         run: |
-          # 使用 Chrome 命令行工具打包 CRX
-          chrome --pack-extension=dist --pack-extension-key=private.pem
-          mv dist.crx chrome-bookmark-manager-${{ env.VERSION }}.crx
+          chrome-extension-cli pack \
+            --source dist \
+            --privateKey private.pem \
+            --output chrome-bookmark-manager-${{ env.VERSION }}.crx
 
       - name: Cleanup private key
         run: rm -f private.pem
