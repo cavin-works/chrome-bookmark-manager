@@ -39,8 +39,8 @@ jobs:
           zip -r ../chrome-bookmark-manager-${{ env.VERSION }}.zip *
           cd ..
 
-      - name: Install crx3-utils
-        run: npm install -g crx3-utils
+      - name: Install crx package
+        run: npm install -g crx
 
       - name: Generate private key
         run: |
@@ -50,10 +50,9 @@ jobs:
 
       - name: Package CRX
         run: |
-          crx3-utils create dist \
-            --crx-out chrome-bookmark-manager-${{ env.VERSION }}.crx \
-            --key-path private.pem \
-            --ignore-file private.pem
+          crx pack dist \
+            -o chrome-bookmark-manager-${{ env.VERSION }}.crx \
+            -p private.pem
 
       - name: Verify files exist
         run: |
