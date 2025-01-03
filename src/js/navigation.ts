@@ -520,70 +520,84 @@ function handleBookmarkDrop(bookmarkId: string, targetFolderId: string, targetEl
 // 处理文件夹移动
 function handleFolderMove(folderId: string, targetFolderId: string, mouseY: number, targetElement: HTMLElement) {
     // 检查是否试图将文件夹移动到其子文件夹中
-    chrome.bookmarks.getSubTree(folderId, (results) => {
-        if (results.length > 0) {
-            const sourceFolder = results[0];
-            let isMovingToChild = false;
-
-            function checkChildren(node: Bookmark) {
-                if (node.id === targetFolderId) {
-                    isMovingToChild = true;
-                    return;
+    chrome.bookmarks.getTree((results: chrome.bookmarks.BookmarkTreeNode[]) => {
+        // 在整个书签树中查找源文件夹
+        function findSourceFolder(nodes: chrome.bookmarks.BookmarkTreeNode[]): chrome.bookmarks.BookmarkTreeNode | null {
+            for (const node of nodes) {
+                if (node.id === folderId) {
+                    return node;
                 }
                 if (node.children) {
-                    node.children.forEach(checkChildren);
+                    const found = findSourceFolder(node.children);
+                    if (found) return found;
                 }
             }
+            return null;
+        }
 
-            checkChildren(sourceFolder);
+        const sourceFolder = findSourceFolder(results);
+        if (!sourceFolder) return;
 
-            if (isMovingToChild) {
-                console.error('Cannot move a folder into its own child folder');
+        let isMovingToChild = false;
+
+        function checkChildren(node: chrome.bookmarks.BookmarkTreeNode) {
+            if (node.id === targetFolderId) {
+                isMovingToChild = true;
                 return;
             }
-
-            // 获取目标文件夹的信息
-            chrome.bookmarks.get(targetFolderId, (targetResults) => {
-                if (targetResults.length > 0) {
-                    const targetFolder = targetResults[0];
-
-                    // 获取目标文件夹的父文件夹
-                    chrome.bookmarks.get(targetFolder.parentId || '0', (parentResults) => {
-                        if (parentResults.length > 0) {
-                            const parentFolder = parentResults[0];
-
-                            // 获取父文件夹的所有子项
-                            chrome.bookmarks.getChildren(parentFolder.id, (siblings) => {
-                                const targetRect = targetElement.getBoundingClientRect();
-                                const threshold = targetRect.top + targetRect.height / 2;
-                                const insertBefore = mouseY < threshold;
-
-                                // 计算新的索引
-                                let newIndex = siblings.findIndex(sibling => sibling.id === targetFolderId);
-                                if (!insertBefore) {
-                                    newIndex++;
-                                }
-
-                                // 如果源文件夹在同一父文件夹中且在目标之前，需要调整索引
-                                const sourceIndex = siblings.findIndex(sibling => sibling.id === folderId);
-                                if (sourceIndex !== -1 && sourceIndex < newIndex) {
-                                    newIndex--;
-                                }
-
-                                // 移动文件夹
-                                chrome.bookmarks.move(folderId, {
-                                    parentId: parentFolder.id,
-                                    index: newIndex
-                                }, () => {
-                                    loadFolders();
-                                    targetElement.classList.remove('insert-before', 'insert-after');
-                                });
-                            });
-                        }
-                    });
-                }
-            });
+            if (node.children) {
+                node.children.forEach(checkChildren);
+            }
         }
+
+        checkChildren(sourceFolder);
+
+        if (isMovingToChild) {
+            console.error('Cannot move a folder into its own child folder');
+            return;
+        }
+
+        // 获取目标文件夹的信息
+        chrome.bookmarks.get(targetFolderId, (targetResults: chrome.bookmarks.BookmarkTreeNode[]) => {
+            if (targetResults.length > 0) {
+                const targetFolder = targetResults[0];
+
+                // 获取目标文件夹的父文件夹
+                chrome.bookmarks.get(targetFolder.parentId || '0', (parentResults: chrome.bookmarks.BookmarkTreeNode[]) => {
+                    if (parentResults.length > 0) {
+                        const parentFolder = parentResults[0];
+
+                        // 获取父文件夹的所有子项
+                        chrome.bookmarks.getChildren(parentFolder.id, (siblings: chrome.bookmarks.BookmarkTreeNode[]) => {
+                            const targetRect = targetElement.getBoundingClientRect();
+                            const threshold = targetRect.top + targetRect.height / 2;
+                            const insertBefore = mouseY < threshold;
+
+                            // 计算新的索引
+                            let newIndex = siblings.findIndex(sibling => sibling.id === targetFolderId);
+                            if (!insertBefore) {
+                                newIndex++;
+                            }
+
+                            // 如果源文件夹在同一父文件夹中且在目标之前，需要调整索引
+                            const sourceIndex = siblings.findIndex(sibling => sibling.id === folderId);
+                            if (sourceIndex !== -1 && sourceIndex < newIndex) {
+                                newIndex--;
+                            }
+
+                            // 移动文件夹
+                            chrome.bookmarks.move(folderId, {
+                                parentId: parentFolder.id,
+                                index: newIndex
+                            }, () => {
+                                loadFolders();
+                                targetElement.classList.remove('insert-before', 'insert-after');
+                            });
+                        });
+                    }
+                });
+            }
+        });
     });
 }
 
