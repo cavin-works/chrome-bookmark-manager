@@ -2,6 +2,17 @@
 
 interface Bookmark extends chrome.bookmarks.BookmarkTreeNode {}
 
+// 初始化事件监听器
+document.addEventListener('DOMContentLoaded', () => {
+    // GitHub 链接点击事件
+    const githubLink = document.getElementById('githubLink');
+    if (githubLink) {
+        githubLink.addEventListener('click', () => {
+            chrome.tabs.create({ url: 'https://github.com/cavin-works/chrome-bookmark-manager' });
+        });
+    }
+});
+
 // 加载书签列表
 function loadBookmarks(folderId: string) {
     chrome.bookmarks.getChildren(folderId, (bookmarks: Bookmark[]) => {
