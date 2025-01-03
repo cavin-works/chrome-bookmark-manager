@@ -39,8 +39,8 @@ jobs:
           zip -r ../chrome-bookmark-manager-${{ env.VERSION }}.zip *
           cd ..
 
-      - name: Install chrome-extension-cli
-        run: npm install -g chrome-extension-cli
+      - name: Install crx3-utils
+        run: npm install -g crx3-utils
 
       - name: Generate private key
         run: |
@@ -50,10 +50,15 @@ jobs:
 
       - name: Package CRX
         run: |
-          chrome-extension-cli pack \
-            --source dist \
-            --privateKey private.pem \
-            --output chrome-bookmark-manager-${{ env.VERSION }}.crx
+          crx3-utils create dist \
+            --crx-out chrome-bookmark-manager-${{ env.VERSION }}.crx \
+            --key-path private.pem \
+            --ignore-file private.pem
+
+      - name: Verify files exist
+        run: |
+          ls -la chrome-bookmark-manager-${{ env.VERSION }}.zip
+          ls -la chrome-bookmark-manager-${{ env.VERSION }}.crx
 
       - name: Cleanup private key
         run: rm -f private.pem
