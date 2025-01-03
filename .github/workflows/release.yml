@@ -23,6 +23,10 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: npm ci
 
@@ -32,19 +36,36 @@ jobs:
       - name: Create ZIP file
         run: |
           cd dist
-          zip -r ../chrome-bookmark-manager.zip *
+          zip -r ../chrome-bookmark-manager-${{ env.VERSION }}.zip *
           cd ..
 
-      - name: Get version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Generate private key
+        run: |
+          echo "${{ secrets.EXTENSION_PRIVATE_KEY }}" > private.pem
+        env:
+          EXTENSION_PRIVATE_KEY: ${{ secrets.EXTENSION_PRIVATE_KEY }}
+
+      - name: Package CRX
+        run: |
+          # 使用 Chrome 命令行工具打包 CRX
+          chrome --pack-extension=dist --pack-extension-key=private.pem
+          mv dist.crx chrome-bookmark-manager-${{ env.VERSION }}.crx
+
+      - name: Cleanup private key
+        run: rm -f private.pem
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ env.VERSION }}
           files: |
-            chrome-bookmark-manager.zip
+            chrome-bookmark-manager-${{ env.VERSION }}.zip
+            chrome-bookmark-manager-${{ env.VERSION }}.crx
           draft: false
           prerelease: false
           generate_release_notes: true
