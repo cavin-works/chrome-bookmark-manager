@@ -1,6 +1,12 @@
 # Chrome 书签管理器
 
+[![GitHub](https://img.shields.io/badge/GitHub-chrome--bookmark--manager-blue?logo=github)](https://github.com/cavin-works/chrome-bookmark-manager)
+[![License](https://img.shields.io/github/license/cavin-works/chrome-bookmark-manager)](https://github.com/cavin-works/chrome-bookmark-manager/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/cavin-works/chrome-bookmark-manager)](https://github.com/cavin-works/chrome-bookmark-manager/releases)
+
 一个美观、实用的 Chrome 书签管理扩展，帮助你更好地组织和管理浏览器书签。
+
+🔗 **GitHub 仓库：** [https://github.com/cavin-works/chrome-bookmark-manager](https://github.com/cavin-works/chrome-bookmark-manager)
 
 ## 功能特点
 
