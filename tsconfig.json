@@ -1,17 +1,15 @@
 {
     "compilerOptions": {
-        "target": "es6",
-        "module": "es6",
-        "outDir": "dist/js",
-        "rootDir": "src/js",
+        "target": "es2016",
+        "module": "commonjs",
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "lib": ["dom", "es6"]
+        "outDir": "./dist/js"
     },
     "include": [
-        "src/js/**/*"
+        "src/**/*"
     ],
     "exclude": [
         "node_modules"

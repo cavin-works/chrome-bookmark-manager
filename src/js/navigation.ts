@@ -238,8 +238,88 @@ function createBookmarkElement(bookmark: Bookmark): HTMLElement {
     bookmarkEl.appendChild(actions);
 
     // 添加拖拽事件监听器
-    bookmarkEl.addEventListener('dragstart', handleDragStart);
-    bookmarkEl.addEventListener('dragend', handleDragEnd);
+    bookmarkEl.addEventListener('dragstart', (e: DragEvent) => {
+        if (!e.dataTransfer) return;
+        bookmarkEl.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // 设置拖拽数据
+        e.dataTransfer.setData('text/plain', bookmark.id);
+    });
+
+    bookmarkEl.addEventListener('dragend', () => {
+        bookmarkEl.classList.remove('dragging');
+        // 移除所有拖拽相关的样式
+        document.querySelectorAll('.folder-item').forEach(folder => {
+            folder.classList.remove('drag-over', 'insert-before', 'insert-after');
+        });
+    });
+
+    // 添加拖拽目标事件
+    bookmarkEl.addEventListener('dragenter', (e: DragEvent) => {
+        e.preventDefault();
+        const draggedElement = document.querySelector('.dragging');
+        if (draggedElement?.classList.contains('bookmark-card')) {
+            bookmarkEl.classList.add('insert-before');
+        }
+    });
+
+    bookmarkEl.addEventListener('dragover', (e: DragEvent) => {
+        e.preventDefault();
+        if (!e.dataTransfer) return;
+        e.dataTransfer.dropEffect = 'move';
+
+        const draggedElement = document.querySelector('.dragging');
+        if (draggedElement?.classList.contains('bookmark-card')) {
+            const rect = bookmarkEl.getBoundingClientRect();
+            const mouseY = e.clientY;
+            const threshold = rect.top + rect.height / 2;
+
+            bookmarkEl.classList.remove('insert-before', 'insert-after');
+            if (mouseY < threshold) {
+                bookmarkEl.classList.add('insert-before');
+            } else {
+                bookmarkEl.classList.add('insert-after');
+            }
+        }
+    });
+
+    bookmarkEl.addEventListener('dragleave', (e: DragEvent) => {
+        if (!e.relatedTarget || !(e.relatedTarget as HTMLElement).closest('.bookmark-card')) {
+            bookmarkEl.classList.remove('insert-before', 'insert-after');
+        }
+    });
+
+    bookmarkEl.addEventListener('drop', (e: DragEvent) => {
+        e.preventDefault();
+        if (!e.dataTransfer) return;
+
+        const draggedElement = document.querySelector('.dragging') as HTMLElement;
+        if (!draggedElement) return;
+
+        const isBookmarkDrag = draggedElement.classList.contains('bookmark-card');
+        const isFolderDrag = draggedElement.classList.contains('folder-item');
+
+        if (draggedElement === bookmarkEl) return;
+
+        const targetFolderId = bookmarkEl.dataset.folderId;
+        if (!targetFolderId) return;
+
+        if (isBookmarkDrag) {
+            const bookmarkId = draggedElement.dataset.bookmarkId;
+            if (bookmarkId) {
+                handleBookmarkDrop(bookmarkId, targetFolderId, bookmarkEl);
+            }
+        } else if (isFolderDrag) {
+            const folderId = draggedElement.dataset.folderId;
+            if (folderId && folderId !== targetFolderId) {
+                handleFolderMove(folderId, targetFolderId, e.clientY, bookmarkEl);
+            }
+        }
+
+        // 清除所有拖拽相关的样式
+        bookmarkEl.classList.remove('drag-over', 'insert-before', 'insert-after');
+        draggedElement.classList.remove('dragging');
+    });
 
     bookmarkEl.onclick = () => {
         if (bookmark.url) {
@@ -252,10 +332,10 @@ function createBookmarkElement(bookmark: Bookmark): HTMLElement {
 
 // 创建文件夹元素
 function createFolderElement(folder: Bookmark): HTMLElement {
-    const folderEl = document.createElement('div');
-    folderEl.className = 'folder-item';
-    folderEl.dataset.folderId = folder.id;
-    folderEl.draggable = true;
+    const element = document.createElement('div');
+    element.className = 'folder-item';
+    element.dataset.folderId = folder.id;
+    element.draggable = true;
 
     const icon = document.createElement('span');
     icon.className = 'folder-icon';
@@ -292,536 +372,219 @@ function createFolderElement(folder: Bookmark): HTMLElement {
     actions.appendChild(editBtn);
     actions.appendChild(deleteBtn);
 
-    folderEl.appendChild(icon);
-    folderEl.appendChild(name);
-    folderEl.appendChild(actions);
+    element.appendChild(icon);
+    element.appendChild(name);
+    element.appendChild(actions);
 
-    // 添加文件夹拖拽事件监听器
-    folderEl.addEventListener('dragstart', (e: DragEvent) => {
-        if (!e.target || !e.dataTransfer) return;
-        const target = e.target as HTMLElement;
-        target.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', target.dataset.folderId || '');
-        e.dataTransfer.setData('application/json', JSON.stringify({
-            type: 'folder',
-            id: target.dataset.folderId,
-            parentId: folder.parentId
-        }));
-    });
-
-    folderEl.addEventListener('dragend', (e: DragEvent) => {
-        if (!e.target) return;
-        const target = e.target as HTMLElement;
-        target.classList.remove('dragging');
-        // 移除所有拖拽相关的样式
-        document.querySelectorAll('.folder-item').forEach(folder => {
-            folder.classList.remove('drag-over', 'drag-before', 'drag-after');
-        });
-    });
-
-    folderEl.addEventListener('dragenter', (e: DragEvent) => {
-        e.preventDefault();
-        if (!e.target || !e.dataTransfer) return;
-
-        const target = e.target as HTMLElement;
-        const folderItem = target.closest('.folder-item');
-        if (!folderItem) return;
-
-        // 检查是否是文件夹拖拽
-        try {
-            const dragData = e.dataTransfer.getData('application/json');
-            if (!dragData) return;
-            const data = JSON.parse(dragData);
-            if (data.type !== 'folder') return;
-        } catch (err) {
+    // 添加拖拽事件监听器
+    element.addEventListener('dragstart', (e: DragEvent) => {
+        // 如果点击的是按钮，不启动拖拽
+        if ((e.target as HTMLElement).tagName === 'BUTTON') {
+            e.preventDefault();
             return;
         }
 
-        // 如果是拖动到自己身上，不显示效果
-        const draggingElement = document.querySelector('.folder-item.dragging');
-        if (draggingElement && draggingElement === folderItem) return;
+        if (!e.dataTransfer) return;
+        element.classList.add('dragging');
+        // 设置拖拽数据
+        e.dataTransfer.setData('text/plain', folder.id);
+        e.dataTransfer.effectAllowed = 'move';
+    });
 
-        // 移除其他文件夹的拖拽效果
-        document.querySelectorAll('.folder-item').forEach(item => {
-            if (item !== folderItem) {
-                item.classList.remove('drag-over', 'drag-before', 'drag-after');
-            }
+    element.addEventListener('dragend', () => {
+        element.classList.remove('dragging');
+        // 移除所有拖拽相关的样式
+        document.querySelectorAll('.folder-item').forEach(folder => {
+            folder.classList.remove('drag-over', 'insert-before', 'insert-after');
         });
-
-        const rect = folderItem.getBoundingClientRect();
-        const mouseY = e.clientY;
-        const threshold = rect.top + rect.height / 2;
-
-        folderItem.classList.remove('drag-before', 'drag-after', 'drag-over');
-        if (mouseY < threshold) {
-            folderItem.classList.add('drag-before');
-        } else {
-            folderItem.classList.add('drag-after');
-        }
     });
 
-    folderEl.addEventListener('dragover', (e: DragEvent) => {
+    element.addEventListener('dragenter', (e: DragEvent) => {
         e.preventDefault();
-        if (!e.target || !e.dataTransfer) return;
+        if (!e.dataTransfer) return;
 
-        const target = e.target as HTMLElement;
-        const folderItem = target.closest('.folder-item');
-        if (!folderItem) return;
+        const draggedElement = document.querySelector('.dragging');
+        if (!draggedElement || draggedElement === element) return;
 
-        // 如果是拖动到自己身上，不显示效果
-        const draggingElement = document.querySelector('.folder-item.dragging');
-        if (draggingElement && draggingElement === folderItem) return;
+        const isBookmarkDrag = draggedElement.classList.contains('bookmark-card');
+        const isFolderDrag = draggedElement.classList.contains('folder-item');
 
-        const rect = folderItem.getBoundingClientRect();
-        const mouseY = e.clientY;
-        const threshold = rect.top + rect.height / 2;
-
-        folderItem.classList.remove('drag-before', 'drag-after', 'drag-over');
-        if (mouseY < threshold) {
-            folderItem.classList.add('drag-before');
-        } else {
-            folderItem.classList.add('drag-after');
-        }
-    });
-
-    folderEl.addEventListener('dragleave', (e: DragEvent) => {
-        if (!e.target || !e.relatedTarget) return;
-        const target = e.target as HTMLElement;
-        const folderItem = target.closest('.folder-item');
-        const relatedTarget = e.relatedTarget as HTMLElement;
-
-        if (folderItem && !folderItem.contains(relatedTarget)) {
-            folderItem.classList.remove('drag-over', 'drag-before', 'drag-after');
-        }
-    });
-
-    folderEl.addEventListener('drop', (e: DragEvent) => {
-        e.preventDefault();
-        if (!e.dataTransfer || !e.target) return;
-
-        const target = e.target as HTMLElement;
-        const folderItem = target.closest('.folder-item') as HTMLDivElement;
-        if (!folderItem) return;
-
-        try {
-            const dragData = e.dataTransfer.getData('application/json');
-            if (!dragData) return;
-            const data = JSON.parse(dragData);
-            if (data.type !== 'folder') return;
-
-            const folderId = data.id;
-            const targetFolderId = folderItem.dataset.folderId;
-
-            if (!folderId || !targetFolderId || folderId === targetFolderId) {
-                folderItem.classList.remove('drag-over', 'drag-before', 'drag-after');
-                return;
-            }
-
-            // 获取目标位置
-            const rect = folderItem.getBoundingClientRect();
+        if (isBookmarkDrag) {
+            element.classList.add('drag-over');
+        } else if (isFolderDrag) {
+            const rect = element.getBoundingClientRect();
             const mouseY = e.clientY;
             const threshold = rect.top + rect.height / 2;
 
-            // 获取所有同级文件夹
-            chrome.bookmarks.get(folderId, (sourceNodes) => {
-                if (sourceNodes.length === 0) return;
-                const sourceNode = sourceNodes[0];
-
-                chrome.bookmarks.get(targetFolderId, (targetNodes) => {
-                    if (targetNodes.length === 0) return;
-                    const targetNode = targetNodes[0];
-
-                    // 确定移动位置
-                    chrome.bookmarks.get(targetNode.parentId || '1', (parentNodes) => {
-                        if (parentNodes.length === 0) return;
-                        const parentNode = parentNodes[0];
-
-                        chrome.bookmarks.getChildren(parentNode.id, (siblings) => {
-                            const targetIndex = siblings.findIndex(s => s.id === targetNode.id);
-                            if (targetIndex === -1) return;
-
-                            // 计算新的位置
-                            let newIndex = mouseY < threshold ? targetIndex : targetIndex + 1;
-
-                            // 如果源文件夹在目标文件夹之前，需要调整索引
-                            if (sourceNode.parentId === targetNode.parentId) {
-                                const sourceIndex = siblings.findIndex(s => s.id === sourceNode.id);
-                                if (sourceIndex < targetIndex) {
-                                    newIndex--;
-                                }
-                            }
-
-                            // 移动文件夹
-                            chrome.bookmarks.move(folderId, {
-                                parentId: targetNode.parentId,
-                                index: newIndex
-                            }, () => {
-                                loadFolders();
-                                if (document.querySelector('.folder-item.active')?.textContent === '全部书签') {
-                                    loadAllBookmarks();
-                                }
-                            });
-                        });
-                    });
-                });
-            });
-        } catch (err) {
-            console.error('Error handling folder drop:', err);
+            element.classList.remove('insert-before', 'insert-after');
+            if (mouseY < threshold) {
+                element.classList.add('insert-before');
+            } else {
+                element.classList.add('insert-after');
+            }
         }
-
-        // 清除所有拖拽样式
-        folderItem.classList.remove('drag-over', 'drag-before', 'drag-after');
     });
 
-    folderEl.onclick = (e: Event) => {
-        e.stopPropagation();
+    element.addEventListener('dragover', (e: DragEvent) => {
+        e.preventDefault();
+        if (!e.dataTransfer) return;
+        e.dataTransfer.dropEffect = 'move';
+
+        const draggedElement = document.querySelector('.dragging');
+        if (!draggedElement || draggedElement === element) return;
+
+        const isBookmarkDrag = draggedElement.classList.contains('bookmark-card');
+        const isFolderDrag = draggedElement.classList.contains('folder-item');
+
+        if (isBookmarkDrag) {
+            element.classList.add('drag-over');
+        } else if (isFolderDrag) {
+            const rect = element.getBoundingClientRect();
+            const mouseY = e.clientY;
+            const threshold = rect.top + rect.height / 2;
+
+            element.classList.remove('insert-before', 'insert-after');
+            if (mouseY < threshold) {
+                element.classList.add('insert-before');
+            } else {
+                element.classList.add('insert-after');
+            }
+        }
+    });
+
+    element.addEventListener('dragleave', (e: DragEvent) => {
+        const relatedTarget = e.relatedTarget as HTMLElement;
+        if (!relatedTarget || !element.contains(relatedTarget)) {
+            element.classList.remove('drag-over', 'insert-before', 'insert-after');
+        }
+    });
+
+    element.addEventListener('drop', (e: DragEvent) => {
+        e.preventDefault();
+        if (!e.dataTransfer) return;
+
+        const draggedElement = document.querySelector('.dragging') as HTMLElement;
+        if (!draggedElement) return;
+
+        const isBookmarkDrag = draggedElement.classList.contains('bookmark-card');
+        const isFolderDrag = draggedElement.classList.contains('folder-item');
+
+        if (draggedElement === element) return;
+
+        if (isBookmarkDrag) {
+            const bookmarkId = draggedElement.dataset.bookmarkId;
+            if (bookmarkId) {
+                handleBookmarkDrop(bookmarkId, folder.id, element);
+            }
+        } else if (isFolderDrag) {
+            const draggedFolderId = e.dataTransfer.getData('text/plain');
+            if (draggedFolderId && draggedFolderId !== folder.id) {
+                const rect = element.getBoundingClientRect();
+                const mouseY = e.clientY;
+                handleFolderMove(draggedFolderId, folder.id, mouseY, element);
+            }
+        }
+
+        // 清除所有拖拽相关的样式
+        element.classList.remove('drag-over', 'insert-before', 'insert-after');
+        draggedElement.classList.remove('dragging');
+    });
+
+    // 添加点击事件处理
+    element.addEventListener('click', (e: Event) => {
+        // 如果点击的是按钮，不处理点击事件
+        if ((e.target as HTMLElement).tagName === 'BUTTON') {
+            return;
+        }
+
         document.querySelectorAll('.folder-item').forEach(f => f.classList.remove('active'));
-        folderEl.classList.add('active');
+        element.classList.add('active');
         const titleEl = document.getElementById('currentFolderTitle');
         if (titleEl) {
             titleEl.textContent = folder.title;
         }
         loadBookmarks(folder.id);
-    };
+    });
 
-    return folderEl;
+    return element;
 }
 
 // 处理书签拖放
-function handleBookmarkDrop(bookmarkId: string, targetFolderId: string, folderElement: HTMLElement) {
-    chrome.bookmarks.get(bookmarkId, (bookmarks) => {
-        if (bookmarks.length === 0) return;
-
-        const bookmark = bookmarks[0];
-        if (bookmark.parentId === targetFolderId) {
-            folderElement.classList.remove('drag-over');
-            return;
-        }
-
-        const bookmarkElement = document.querySelector(`[data-bookmark-id="${bookmarkId}"]`);
-        if (bookmarkElement) {
-            bookmarkElement.classList.add('moving');
-        }
-
-        chrome.bookmarks.move(bookmarkId, {
-            parentId: targetFolderId
-        }, () => {
-            const activeFolder = document.querySelector('.folder-item.active') as HTMLDivElement;
-            if (activeFolder?.dataset.folderId) {
-                loadBookmarks(activeFolder.dataset.folderId);
-            } else {
-                loadAllBookmarks();
-            }
-
-            folderElement.classList.remove('drag-over');
-        });
+function handleBookmarkDrop(bookmarkId: string, targetFolderId: string, targetElement: HTMLElement) {
+    chrome.bookmarks.move(bookmarkId, { parentId: targetFolderId }, () => {
+        loadBookmarks(targetFolderId);
+        targetElement.classList.remove('drag-over');
     });
 }
 
-// 拖拽相关的事件处理函数
-function handleDragStart(e: DragEvent) {
-    if (!e.target) return;
-    const target = e.target as HTMLElement;
-    target.classList.add('dragging');
-    if (e.dataTransfer) {
-        e.dataTransfer.setData('text/plain', target.dataset.bookmarkId || '');
-    }
-    const folderList = document.querySelector('.folder-list');
-    if (folderList) {
-        folderList.classList.add('drag-active');
-    }
-}
+// 处理文件夹移动
+function handleFolderMove(folderId: string, targetFolderId: string, mouseY: number, targetElement: HTMLElement) {
+    // 检查是否试图将文件夹移动到其子文件夹中
+    chrome.bookmarks.getSubTree(folderId, (results) => {
+        if (results.length > 0) {
+            const sourceFolder = results[0];
+            let isMovingToChild = false;
 
-function handleDragEnd(e: DragEvent) {
-    if (!e.target) return;
-    const target = e.target as HTMLElement;
-    target.classList.remove('dragging');
-    const folderList = document.querySelector('.folder-list');
-    if (folderList) {
-        folderList.classList.remove('drag-active');
-    }
-    // 移除所有文件夹的drag-over状态
-    document.querySelectorAll('.folder-item').forEach(folder => {
-        folder.classList.remove('drag-over');
-    });
-}
-
-function handleDragEnter(e: DragEvent) {
-    e.preventDefault();
-    if (!e.target) return;
-    const folderItem = (e.target as HTMLElement).closest('.folder-item');
-    if (folderItem) {
-        // 移除其他文件夹的 drag-over 状态
-        document.querySelectorAll('.folder-item').forEach(item => {
-            if (item !== folderItem) {
-                item.classList.remove('drag-over');
-            }
-        });
-        folderItem.classList.add('drag-over');
-    }
-}
-
-function handleDragOver(e: DragEvent) {
-    e.preventDefault();
-    if (!e.target) return;
-    const folderItem = (e.target as HTMLElement).closest('.folder-item');
-    if (folderItem && !folderItem.classList.contains('drag-over')) {
-        folderItem.classList.add('drag-over');
-    }
-}
-
-function handleDragLeave(e: DragEvent) {
-    if (!e.target) return;
-    const folderItem = (e.target as HTMLElement).closest('.folder-item');
-    if (folderItem && e.relatedTarget) {
-        // 检查是否真的离开了文件夹元素
-        const relatedFolder = (e.relatedTarget as HTMLElement).closest('.folder-item');
-        if (folderItem !== relatedFolder) {
-            folderItem.classList.remove('drag-over');
-        }
-    }
-}
-
-function handleDrop(e: DragEvent) {
-    e.preventDefault();
-    if (!e.dataTransfer || !e.target) return;
-
-    const bookmarkId = e.dataTransfer.getData('text/plain');
-    const folderElement = (e.target as HTMLElement).closest('.folder-item') as HTMLDivElement;
-
-    if (!folderElement) return;
-
-    const targetFolderId = folderElement.dataset.folderId;
-
-    if (bookmarkId && targetFolderId) {
-        // 检查是否是有效的移动操作
-        chrome.bookmarks.get(bookmarkId, (bookmarks) => {
-            if (bookmarks.length === 0) return;
-
-            const bookmark = bookmarks[0];
-            if (bookmark.parentId === targetFolderId) {
-                // 如果已经在目标文件夹中，显示提示并移除样式
-                folderElement.classList.remove('drag-over');
-                const folderList = document.querySelector('.folder-list');
-                if (folderList) {
-                    folderList.classList.remove('drag-active');
+            function checkChildren(node: Bookmark) {
+                if (node.id === targetFolderId) {
+                    isMovingToChild = true;
+                    return;
                 }
+                if (node.children) {
+                    node.children.forEach(checkChildren);
+                }
+            }
+
+            checkChildren(sourceFolder);
+
+            if (isMovingToChild) {
+                console.error('Cannot move a folder into its own child folder');
                 return;
             }
 
-            // 添加移动动画类
-            const bookmarkElement = document.querySelector(`[data-bookmark-id="${bookmarkId}"]`);
-            if (bookmarkElement) {
-                bookmarkElement.classList.add('moving');
-            }
+            // 获取目标文件夹的信息
+            chrome.bookmarks.get(targetFolderId, (targetResults) => {
+                if (targetResults.length > 0) {
+                    const targetFolder = targetResults[0];
 
-            // 移动书签到新文件夹
-            chrome.bookmarks.move(bookmarkId, {
-                parentId: targetFolderId
-            }, () => {
-                // 重新加载书签列表
-                const activeFolder = document.querySelector('.folder-item.active') as HTMLDivElement;
-                if (activeFolder?.dataset.folderId) {
-                    loadBookmarks(activeFolder.dataset.folderId);
-                } else {
-                    loadAllBookmarks();
-                }
+                    // 获取目标文件夹的父文件夹
+                    chrome.bookmarks.get(targetFolder.parentId || '0', (parentResults) => {
+                        if (parentResults.length > 0) {
+                            const parentFolder = parentResults[0];
 
-                // 移除拖拽相关的样式
-                folderElement.classList.remove('drag-over');
-                const folderList = document.querySelector('.folder-list');
-                if (folderList) {
-                    folderList.classList.remove('drag-active');
-                }
-            });
-        });
-    }
-}
+                            // 获取父文件夹的所有子项
+                            chrome.bookmarks.getChildren(parentFolder.id, (siblings) => {
+                                const targetRect = targetElement.getBoundingClientRect();
+                                const threshold = targetRect.top + targetRect.height / 2;
+                                const insertBefore = mouseY < threshold;
 
-// 文件夹拖拽相关的事件处理函数
-function handleFolderDragStart(e: DragEvent) {
-    if (!e.target) return;
-    const target = e.target as HTMLElement;
-    target.classList.add('dragging');
-    if (e.dataTransfer) {
-        e.dataTransfer.setData('folder-id', target.dataset.folderId || '');
-        e.dataTransfer.setData('drag-type', 'folder');
-        e.dataTransfer.effectAllowed = 'move';
-    }
-    // 添加拖拽状态类
-    const folderList = document.querySelector('.folder-list');
-    if (folderList) {
-        folderList.classList.add('drag-active');
-    }
-}
-
-function handleFolderDragEnd(e: DragEvent) {
-    if (!e.target) return;
-    const target = e.target as HTMLElement;
-    target.classList.remove('dragging');
-    // 移除所有拖拽相关的样式
-    document.querySelectorAll('.folder-item').forEach(folder => {
-        folder.classList.remove('drag-over', 'insert-before', 'insert-after');
-    });
-    // 移除拖拽状态类
-    const folderList = document.querySelector('.folder-list');
-    if (folderList) {
-        folderList.classList.remove('drag-active');
-    }
-}
-
-function handleFolderDragEnter(e: DragEvent) {
-    e.preventDefault();
-    if (!e.target) return;
-    const folderItem = (e.target as HTMLElement).closest('.folder-item');
-    if (folderItem && e.dataTransfer) {
-        const draggedId = e.dataTransfer.getData('folder-id');
-        const targetId = (folderItem as HTMLElement).dataset.folderId;
-
-        // 防止拖到自己身上或自己的子文件夹中
-        if (draggedId && targetId && draggedId !== targetId) {
-            const rect = folderItem.getBoundingClientRect();
-            const mouseY = e.clientY;
-            const threshold = rect.top + rect.height / 2;
-
-            // 移除其他文件夹的所有拖拽相关样式
-            document.querySelectorAll('.folder-item').forEach(item => {
-                if (item !== folderItem) {
-                    item.classList.remove('drag-over', 'insert-before', 'insert-after');
-                }
-            });
-
-            // 根据鼠标位置添加不同的插入线样式
-            folderItem.classList.remove('drag-over', 'insert-before', 'insert-after');
-            if (mouseY < threshold) {
-                folderItem.classList.add('insert-before');
-            } else {
-                folderItem.classList.add('insert-after');
-            }
-        }
-    }
-}
-
-function handleFolderDragOver(e: DragEvent) {
-    e.preventDefault();
-    e.dataTransfer!.dropEffect = 'move';
-    if (!e.target) return;
-    const folderItem = (e.target as HTMLElement).closest('.folder-item');
-    if (folderItem && e.dataTransfer) {
-        const draggedId = e.dataTransfer.getData('folder-id');
-        const targetId = (folderItem as HTMLElement).dataset.folderId;
-
-        if (draggedId && targetId && draggedId !== targetId) {
-            const rect = folderItem.getBoundingClientRect();
-            const mouseY = e.clientY;
-            const threshold = rect.top + rect.height / 2;
-
-            // 根据鼠标位置更新插入线样式
-            folderItem.classList.remove('insert-before', 'insert-after');
-            if (mouseY < threshold) {
-                folderItem.classList.add('insert-before');
-            } else {
-                folderItem.classList.add('insert-after');
-            }
-        }
-    }
-}
-
-function handleFolderDragLeave(e: DragEvent) {
-    if (!e.target) return;
-    const folderItem = (e.target as HTMLElement).closest('.folder-item');
-    const relatedTarget = e.relatedTarget as HTMLElement;
-
-    if (folderItem && (!relatedTarget || !folderItem.contains(relatedTarget))) {
-        folderItem.classList.remove('drag-over', 'insert-before', 'insert-after');
-    }
-}
-
-function handleFolderDrop(e: DragEvent) {
-    e.preventDefault();
-    if (!e.dataTransfer || !e.target) return;
-
-    const dragType = e.dataTransfer.getData('drag-type');
-    if (dragType !== 'folder') return;
-
-    const folderId = e.dataTransfer.getData('folder-id');
-    const targetElement = (e.target as HTMLElement).closest('.folder-item') as HTMLDivElement;
-    if (!targetElement) return;
-
-    const targetFolderId = targetElement.dataset.folderId;
-
-    if (folderId && targetFolderId && folderId !== targetFolderId) {
-        // 获取鼠标位置，决定是放在目标文件夹的前面还是后面
-        const rect = targetElement.getBoundingClientRect();
-        const mouseY = e.clientY;
-        const threshold = rect.top + rect.height / 2;
-        const insertBefore = mouseY < threshold;
-
-        // 检查是否试图将文件夹移动到其子文件夹中
-        chrome.bookmarks.get(targetFolderId, (targetNodes) => {
-            if (targetNodes.length === 0) return;
-            const targetNode = targetNodes[0];
-
-            chrome.bookmarks.get(folderId, (sourceNodes) => {
-                if (sourceNodes.length === 0) return;
-                const sourceNode = sourceNodes[0];
-
-                // 检查目标文件夹是否是源文件夹的子文件夹
-                chrome.bookmarks.getTree((tree) => {
-                    const fullSourceNode = findNodeInBookmarkTree(tree[0], folderId);
-                    if (!fullSourceNode) return;
-
-                    const isChild = findNodeInTree(fullSourceNode, targetFolderId);
-                    if (isChild) {
-                        alert('不能将文件夹移动到其子文件夹中');
-                        return;
-                    }
-
-                    // 获取目标位置的索引
-                    chrome.bookmarks.get(targetNode.parentId || '', (parentNodes) => {
-                        if (parentNodes.length === 0) return;
-                        const parentNode = parentNodes[0];
-
-                        chrome.bookmarks.getChildren(parentNode.id, (siblings) => {
-                            let targetIndex = siblings.findIndex(s => s.id === targetNode.id);
-                            if (targetIndex === -1) return;
-
-                            // 如果是放在后面，索引加1
-                            if (!insertBefore) {
-                                targetIndex++;
-                            }
-
-                            // 如果源文件夹在目标文件夹之前，需要调整索引
-                            if (sourceNode.parentId === targetNode.parentId) {
-                                const sourceIndex = siblings.findIndex(s => s.id === sourceNode.id);
-                                if (sourceIndex < targetIndex) {
-                                    targetIndex--;
+                                // 计算新的索引
+                                let newIndex = siblings.findIndex(sibling => sibling.id === targetFolderId);
+                                if (!insertBefore) {
+                                    newIndex++;
                                 }
-                            }
 
-                            // 移动文件夹
-                            chrome.bookmarks.move(folderId, {
-                                parentId: targetNode.parentId,
-                                index: targetIndex
-                            }, () => {
-                                // 重新加载文件夹列表
-                                loadFolders();
-                                // 如果当前显示的是全部书签，则刷新书签列表
-                                const activeFolder = document.querySelector('.folder-item.active');
-                                if (!activeFolder || activeFolder.textContent === '全部书签') {
-                                    loadAllBookmarks();
+                                // 如果源文件夹在同一父文件夹中且在目标之前，需要调整索引
+                                const sourceIndex = siblings.findIndex(sibling => sibling.id === folderId);
+                                if (sourceIndex !== -1 && sourceIndex < newIndex) {
+                                    newIndex--;
                                 }
+
+                                // 移动文件夹
+                                chrome.bookmarks.move(folderId, {
+                                    parentId: parentFolder.id,
+                                    index: newIndex
+                                }, () => {
+                                    loadFolders();
+                                    targetElement.classList.remove('insert-before', 'insert-after');
+                                });
                             });
-                        });
+                        }
                     });
-                });
+                }
             });
-        });
-    }
-
-    // 清除所有拖拽相关的样式
-    targetElement.classList.remove('drag-over', 'insert-before', 'insert-after');
+        }
+    });
 }
 
 // 辅助函数：在书签树中查找节点
