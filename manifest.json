@@ -1,28 +1,41 @@
 {
   "manifest_version": 3,
-  "name": "Chrome Bookmark Manager",
-  "version": "1.1.5",
-  "description": "一个强大的Chrome书签管理器",
+  "name": "Bookmark Sage",
+  "version": "1.0",
+  "description": "使用AI自动整理浏览器书签",
   "permissions": [
-    "bookmarks",
-    "storage",
-    "favicon",
-    "downloads",
-    "tabs"
+      "bookmarks",
+      "storage",
+      "activeTab",
+      "scripting"
+  ],
+  "host_permissions": [
+      "<all_urls>"
   ],
   "action": {
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+      "default_popup": "src/popup/popup.html",
+      "default_icon": {
+          "16": "assets/icon16.png",
+          "48": "assets/icon48.png",
+          "128": "assets/icon128.png"
+      }
   },
   "background": {
-    "service_worker": "js/background.js"
-  }
+      "service_worker": "src/background/background.js",
+      "type": "module"
+  },
+  "icons": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+  },
+  "web_accessible_resources": [{
+      "resources": ["assets/icon48.png"],
+      "matches": ["<all_urls>"]
+  }],
+  "content_scripts": [{
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content.js"],
+      "run_at": "document_start"
+  }]
 }
