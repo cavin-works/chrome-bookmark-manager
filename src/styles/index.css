@@ -1,0 +1,22 @@
+/* 样式索引文件 - 统一导入所有样式 */
+
+/* 基础样式 */
+@import './common.css';
+
+/* 页面样式 */
+@import './newtab.css';
+
+/* 组件样式 */
+/* @import './components/button.css'; */
+/* @import './components/modal.css'; */
+/* @import './components/form.css'; */
+
+/* 主题样式 */
+/* @import './themes/light.css'; */
+/* @import './themes/dark.css'; */
+
+/* 响应式样式 */
+/* @import './responsive.css'; */
+
+/* 动画样式 */
+/* @import './animations.css'; */
