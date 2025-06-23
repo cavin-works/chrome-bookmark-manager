@@ -4,380 +4,76 @@
       <n-dialog-provider>
         <n-notification-provider>
           <n-loading-bar-provider>
+            <!-- Stagewise Toolbar - 仅在开发模式下显示 -->
+            <StagewiseToolbar v-if="isDev" :config="stageWiseConfig" />
             <div class="newtab-container">
               <!-- 头部 -->
-              <n-layout-header class="header" bordered>
-                <n-space justify="space-between" align="center" class="header-content">
-                  <h1 class="title">Humi Bookmark Manager</h1>
-                  <n-space>
-                    <n-button
-                      circle
-                      quaternary
-                      @click="toggleTheme"
-                      :title="theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
-                    >
-                      <template #icon>
-                        <n-icon>
-                          <SunnyOutline v-if="theme === 'dark'" />
-                          <MoonOutline v-else />
-                        </n-icon>
-                      </template>
-                    </n-button>
-                    <n-button circle quaternary @click="showSettings = true" title="设置">
-                      <template #icon>
-                        <n-icon>
-                          <SettingsOutline />
-                        </n-icon>
-                      </template>
-                    </n-button>
-                  </n-space>
-                </n-space>
-              </n-layout-header>
+              <Header
+                :current-theme="theme"
+                @toggle-theme="toggleTheme"
+                @show-settings="showSettings = true"
+              />
 
               <!-- 主内容 -->
               <n-layout has-sider class="main-layout">
                 <!-- 侧边栏 -->
-                <n-layout-sider
-                  bordered
-                  collapse-mode="width"
-                  :collapsed-width="64"
-                  :width="320"
+                <Sidebar
+                  :bookmarks="bookmarks"
+                  :bookmark-folders="bookmarkFolders"
+                  :selected-folder="selectedFolder"
                   :collapsed="sidebarCollapsed"
-                  show-trigger
-                  @collapse="sidebarCollapsed = true"
-                  @expand="sidebarCollapsed = false"
-                  class="sidebar"
-                  :native-scrollbar="false"
-                >
-                  <div class="sidebar-content">
-                                        <!-- 全部书签 -->
-                    <div v-if="!sidebarCollapsed" class="all-bookmarks-section">
-                      <div class="all-bookmarks-header">
-                        <div
-                          class="all-bookmarks-item"
-                          :class="{ selected: selectedFolder === '' }"
-                          @click="selectFolder('')"
-                        >
-                          <div class="all-bookmarks-content">
-                            <n-icon class="all-bookmarks-icon">
-                              <BookmarksOutline />
-                            </n-icon>
-                            <span class="all-bookmarks-label">全部书签</span>
-                            <n-text depth="3" class="all-bookmarks-count">{{ bookmarks.length }}</n-text>
-                          </div>
-                        </div>
-
-                        <n-button
-                          size="small"
-                          circle
-                          quaternary
-                          @click="showAddFolder = true"
-                          title="添加文件夹"
-                          class="add-folder-btn"
-                        >
-                          <template #icon>
-                            <n-icon>
-                              <AddOutline />
-                            </n-icon>
-                          </template>
-                        </n-button>
-                      </div>
-                    </div>
-
-                    <div v-if="!sidebarCollapsed" class="sidebar-tree">
-                      <DragSortableTree
-                        :bookmarks="bookmarks"
-                        :bookmark-folders="bookmarkFolders"
-                        :selected-folder="selectedFolder"
-                        @select="selectFolder"
-                        @reorder="handleFolderReorder"
-                        :hide-all-bookmarks="true"
-                      />
-                    </div>
-                  </div>
-                </n-layout-sider>
+                  @select-folder="selectFolder"
+                  @add-folder="showAddFolder = true"
+                  @collapse="sidebarCollapsed = $event"
+                  @reorder="handleFolderReorder"
+                />
 
                 <!-- 内容区域 -->
                 <n-layout-content class="content">
                   <n-scrollbar class="content-scrollbar">
                     <div class="content-wrapper">
-                    <!-- 搜索栏 -->
-                    <div class="search-bar">
-                      <div class="search-section">
-                        <n-input
-                          v-model:value="searchQuery"
-                          placeholder="搜索标题、网址、描述、标签..."
-                          clearable
-                          size="large"
-                          class="search-input"
-                          @input="onSearchInput"
-                        >
-                          <template #prefix>
-                            <n-icon size="20" class="search-icon">
-                              <SearchOutline />
-                            </n-icon>
-                          </template>
-                        </n-input>
-                      </div>
+                      <!-- 搜索栏 -->
+                      <SearchBar
+                        v-model:search-query="searchQuery"
+                        v-model:layout="layout"
+                        @search-input="onSearchInput"
+                      />
 
-                      <div class="controls-section">
-                        <n-button-group size="large">
-                          <n-button
-                            :type="layout === 'grid' ? 'primary' : 'default'"
-                            @click="layout = 'grid'"
-                            title="网格视图"
-                          >
-                            <template #icon>
-                              <n-icon size="18">
-                                <GridOutline />
-                              </n-icon>
-                            </template>
-                          </n-button>
-                          <n-button
-                            :type="layout === 'list' ? 'primary' : 'default'"
-                            @click="layout = 'list'"
-                            title="列表视图"
-                          >
-                            <template #icon>
-                              <n-icon size="18">
-                                <ListOutline />
-                              </n-icon>
-                            </template>
-                          </n-button>
-                        </n-button-group>
-                      </div>
+                      <!-- 书签内容 -->
+                      <BookmarkGrid
+                        :filtered-bookmarks="filteredBookmarks"
+                        :search-query="searchQuery"
+                        :layout="layout"
+                        :loading="loading"
+                        @add-bookmark="showAddBookmark = true"
+                        @open-bookmark="openBookmark"
+                        @edit-bookmark="editBookmark"
+                        @delete-bookmark="deleteBookmark"
+                      />
                     </div>
-
-                    <!-- 搜索结果提示 -->
-                    <div v-if="searchQuery && filteredBookmarks.length > 0" class="search-result-info">
-                      <n-text depth="3">
-                        找到 {{ filteredBookmarks.length }} 个匹配的书签
-                      </n-text>
-                    </div>
-
-                    <!-- 书签内容 -->
-                    <div class="bookmarks-container">
-                      <!-- 加载状态 -->
-                      <n-spin v-if="loading" :show="loading" class="loading-container">
-                        <div class="loading-content">
-                          <p>加载中...</p>
-                        </div>
-                      </n-spin>
-
-                      <!-- 空状态 -->
-                      <n-empty
-                        v-else-if="filteredBookmarks.length === 0"
-                        :description="searchQuery ? '没有找到匹配的书签' : '暂无书签'"
-                        class="empty-state"
-                      >
-                        <template #extra>
-                          <n-button type="primary" @click="showAddBookmark = true">
-                            <template #icon>
-                              <n-icon>
-                                <AddOutline />
-                              </n-icon>
-                            </template>
-                            添加书签
-                          </n-button>
-                        </template>
-                      </n-empty>
-
-                      <!-- 书签网格/列表 -->
-                      <div v-else class="bookmarks-grid" :class="layout">
-                        <n-card
-                          v-for="bookmark in filteredBookmarks"
-                          :key="bookmark.id"
-                          class="bookmark-card"
-                          hoverable
-                          @click="openBookmark(bookmark)"
-                        >
-                          <template #header>
-                            <n-space align="center">
-                              <n-image
-                                :src="getBookmarkIcon(bookmark)"
-                                :fallback-src="'/icon/default.png'"
-                                width="32"
-                                height="32"
-                                class="bookmark-icon"
-                                lazy
-                                :preview-disabled="true"
-                                :show-toolbar="false"
-                                :intersection-observer-options="{
-                                  root: null,
-                                  rootMargin: '50px'
-                                }"
-                              />
-                              <div class="bookmark-title-container">
-                                <n-ellipsis class="bookmark-title">{{ bookmark.title }}</n-ellipsis>
-                                <n-ellipsis class="bookmark-url">{{ bookmark.url }}</n-ellipsis>
-                              </div>
-                            </n-space>
-                          </template>
-
-                          <template #header-extra>
-                            <n-space>
-                              <n-button
-                                size="small"
-                                circle
-                                quaternary
-                                @click.stop="editBookmark(bookmark)"
-                                title="编辑"
-                              >
-                                <template #icon>
-                                  <n-icon>
-                                    <CreateOutline />
-                                  </n-icon>
-                                </template>
-                              </n-button>
-                              <n-button
-                                size="small"
-                                circle
-                                quaternary
-                                @click.stop="deleteBookmark(bookmark)"
-                                title="删除"
-                              >
-                                <template #icon>
-                                  <n-icon>
-                                    <TrashOutline />
-                                  </n-icon>
-                                </template>
-                              </n-button>
-                            </n-space>
-                          </template>
-
-                          <div class="bookmark-meta">
-                            <n-tag v-if="bookmark.category" type="warning" size="small" class="category-tag">
-                              {{ bookmark.category }}
-                            </n-tag>
-                            <n-space v-if="bookmark.tags && bookmark.tags.length > 0" class="bookmark-tags">
-                              <n-tag
-                                v-for="tag in bookmark.tags.slice(0, 2)"
-                                :key="tag"
-                                type="info"
-                                size="small"
-                              >
-                                {{ tag }}
-                              </n-tag>
-                            </n-space>
-                          </div>
-                        </n-card>
-                      </div>
-                    </div>
-                  </div>
                   </n-scrollbar>
                 </n-layout-content>
               </n-layout>
 
-              <!-- 添加书签对话框 -->
-              <n-modal v-model:show="showAddBookmark" preset="dialog" title="添加书签">
-                <n-form ref="addBookmarkForm" :model="newBookmark" label-placement="top">
-                  <n-form-item label="标题" path="title" required>
-                    <n-input v-model:value="newBookmark.title" placeholder="书签标题" />
-                  </n-form-item>
-                  <n-form-item label="URL" path="url" required>
-                    <n-input v-model:value="newBookmark.url" placeholder="https://example.com" />
-                  </n-form-item>
-                  <n-form-item label="描述" path="description">
-                    <n-input
-                      v-model:value="newBookmark.description"
-                      type="textarea"
-                      placeholder="书签描述（可选）"
-                    />
-                  </n-form-item>
-                  <n-form-item label="分类" path="category">
-                    <n-select
-                      v-model:value="newBookmark.category"
-                      :options="categoryOptions"
-                      placeholder="自动分类"
-                      clearable
-                    />
-                  </n-form-item>
-                  <n-form-item label="文件夹" path="parentId">
-                    <n-select
-                      v-model:value="newBookmark.parentId"
-                      :options="folderOptions"
-                      placeholder="默认位置"
-                      clearable
-                    />
-                  </n-form-item>
-                </n-form>
-                <template #action>
-                  <n-space>
-                    <n-button @click="showAddBookmark = false">取消</n-button>
-                    <n-button
-                      type="primary"
-                      @click="addBookmark"
-                      :disabled="!newBookmark.title || !newBookmark.url"
-                    >
-                      添加
-                    </n-button>
-                  </n-space>
-                </template>
-              </n-modal>
+              <!-- 对话框组件 -->
+              <AddBookmarkDialog
+                v-model:show="showAddBookmark"
+                :category-options="categoryOptions"
+                :folder-options="folderOptions"
+                @confirm="addBookmark"
+              />
 
-              <!-- 添加文件夹对话框 -->
-              <n-modal v-model:show="showAddFolder" preset="dialog" title="创建文件夹">
-                <n-form ref="addFolderForm" :model="newFolder" label-placement="top">
-                  <n-form-item label="文件夹名称" path="title" required>
-                    <n-input v-model:value="newFolder.title" placeholder="文件夹名称" />
-                  </n-form-item>
-                  <n-form-item label="父文件夹" path="parentId">
-                    <n-select
-                      v-model:value="newFolder.parentId"
-                      :options="folderOptions"
-                      placeholder="根目录"
-                      clearable
-                    />
-                  </n-form-item>
-                </n-form>
-                <template #action>
-                  <n-space>
-                    <n-button @click="showAddFolder = false">取消</n-button>
-                    <n-button
-                      type="primary"
-                      @click="addFolder"
-                      :disabled="!newFolder.title"
-                    >
-                      创建
-                    </n-button>
-                  </n-space>
-                </template>
-              </n-modal>
+              <AddFolderDialog
+                v-model:show="showAddFolder"
+                :folder-options="folderOptions"
+                @confirm="addFolder"
+              />
 
-              <!-- 设置对话框 -->
-              <n-modal v-model:show="showSettings" preset="dialog" title="设置">
-                <n-form :model="settings" label-placement="left" label-width="100">
-                  <n-form-item label="主题">
-                    <n-select v-model:value="settings.theme" :options="themeOptions" />
-                  </n-form-item>
-                  <n-form-item label="布局">
-                    <n-select v-model:value="settings.layout" :options="layoutOptions" />
-                  </n-form-item>
-                  <n-form-item label="显示标签">
-                    <n-switch v-model:value="settings.showTags" />
-                  </n-form-item>
-                  <n-form-item label="显示描述">
-                    <n-switch v-model:value="settings.showDescriptions" />
-                  </n-form-item>
-                  <n-form-item label="自动分类">
-                    <n-switch v-model:value="settings.autoCategorize" />
-                  </n-form-item>
-                  <n-form-item label="OpenAI API密钥">
-                    <n-input
-                      v-model:value="settings.aiApiKey"
-                      type="password"
-                      placeholder="sk-..."
-                      show-password-on="click"
-                    />
-                  </n-form-item>
-                </n-form>
-                <template #action>
-                  <n-space>
-                    <n-button @click="showSettings = false">取消</n-button>
-                    <n-button type="primary" @click="saveSettings">保存</n-button>
-                  </n-space>
-                </template>
-              </n-modal>
+              <SettingsDialog
+                v-model:show="showSettings"
+                :settings="settings"
+                @confirm="saveSettings"
+              />
             </div>
           </n-loading-bar-provider>
         </n-notification-provider>
@@ -389,6 +85,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, h } from 'vue';
 import { zhCN, dateZhCN } from 'naive-ui';
+import { StagewiseToolbar } from '@stagewise/toolbar-vue';
+import { VuePlugin } from '@stagewise-plugins/vue';
 import {
   NConfigProvider,
   NMessageProvider,
@@ -396,49 +94,11 @@ import {
   NNotificationProvider,
   NLoadingBarProvider,
   NLayout,
-  NLayoutHeader,
   NLayoutContent,
-  NLayoutSider,
-  NSpace,
-  NButton,
-  NButtonGroup,
-  NIcon,
-  NInput,
-  NInputGroup,
-  NInputGroupLabel,
-  NCard,
-  NAvatar,
-  NImage,
-  NEllipsis,
-  NTag,
-  NModal,
-  NForm,
-  NFormItem,
-  NSelect,
-  NSwitch,
-  NSpin,
-  NEmpty,
   NScrollbar,
-  NText,
   darkTheme,
   lightTheme
 } from 'naive-ui';
-
-// 图标导入
-import {
-  SearchOutline,
-  BookmarkOutline,
-  BookmarksOutline,
-  FolderOutline,
-  AddOutline,
-  SettingsOutline,
-  SunnyOutline,
-  MoonOutline,
-  GridOutline,
-  ListOutline,
-  CreateOutline,
-  TrashOutline
-} from '@vicons/ionicons5';
 
 import { Bookmark, UserSettings } from '../utils/types';
 import { bookmarkService } from '../services/bookmarkService';
@@ -447,7 +107,15 @@ import { aiService } from '../services/aiService';
 import { storageService } from '../services/storageService';
 import { debounce, getSystemTheme } from '../utils/helpers';
 import { message, dialog } from '../utils/naive-ui';
-import DragSortableTree from '../components/DragSortableTree.vue';
+
+// 组件导入
+import Header from '../components/Header.vue';
+import Sidebar from '../components/Sidebar.vue';
+import SearchBar from '../components/SearchBar.vue';
+import BookmarkGrid from '../components/BookmarkGrid.vue';
+import AddBookmarkDialog from '../components/AddBookmarkDialog.vue';
+import AddFolderDialog from '../components/AddFolderDialog.vue';
+import SettingsDialog from '../components/SettingsDialog.vue';
 
 // 响应式数据
 const bookmarks = ref<Bookmark[]>([]);
@@ -469,17 +137,10 @@ const settings = ref<UserSettings>({
   autoCategorize: true,
 });
 
-const newBookmark = ref({
-  title: '',
-  url: '',
-  description: '',
-  category: '',
-  parentId: '',
-});
-
-const newFolder = ref({
-  title: '',
-  parentId: '',
+// Stagewise 配置
+const isDev = ref(import.meta.env.DEV);
+const stageWiseConfig = ref({
+  plugins: [VuePlugin],
 });
 
 // 计算属性
@@ -518,18 +179,7 @@ const folderOptions = computed(() => [
     .map(folder => ({ label: folder.title, value: folder.id }))
 ]);
 
-// 主题选项
-const themeOptions = [
-  { label: '跟随系统', value: 'auto' },
-  { label: '浅色', value: 'light' },
-  { label: '深色', value: 'dark' }
-];
 
-// 布局选项
-const layoutOptions = [
-  { label: '网格', value: 'grid' },
-  { label: '列表', value: 'list' }
-];
 
 const filteredBookmarks = computed(() => {
   let filtered = bookmarks.value;
@@ -565,32 +215,8 @@ const filteredBookmarks = computed(() => {
 });
 
 // 方法
-const getBookmarkIcon = (bookmark: Bookmark) => {
-  // 如果有自定义图标，使用自定义图标
-  if (bookmark.icon && bookmark.icon !== '/icon/default.png') {
-    return bookmark.icon;
-  }
-
-  // 如果有URL，尝试生成favicon URL
-  if (bookmark.url) {
-    try {
-      const url = new URL(bookmark.url);
-      return `${url.protocol}//${url.hostname}/favicon.ico`;
-    } catch (error) {
-      console.warn('无效的URL:', bookmark.url);
-    }
-  }
-
-  // 默认图标
-  return '/icon/default.png';
-};
-
 const selectFolder = (folderId: string) => {
   selectedFolder.value = folderId;
-};
-
-const getFolderCount = (folderId: string) => {
-  return bookmarks.value.filter(bookmark => bookmark.parentId === folderId).length;
 };
 
 const onSearchInput = debounce(() => {
@@ -633,18 +259,18 @@ const deleteBookmark = async (bookmark: Bookmark) => {
   });
 };
 
-const addBookmark = async () => {
+const addBookmark = async (formData: any) => {
   try {
     const bookmarkData = {
-      title: newBookmark.value.title,
-      url: newBookmark.value.url,
-      parentId: newBookmark.value.parentId || undefined,
+      title: formData.title,
+      url: formData.url,
+      parentId: formData.parentId || undefined,
     };
 
     const bookmark = await bookmarkService.createBookmark(bookmarkData);
 
     // AI自动分类
-    if (settings.value.autoCategorize && !newBookmark.value.category) {
+    if (settings.value.autoCategorize && !formData.category) {
       try {
         const aiResult = await aiService.categorizeBookmark(bookmark);
         bookmark.category = aiResult.category;
@@ -661,16 +287,6 @@ const addBookmark = async () => {
       }
     }
 
-    // 重置表单
-    newBookmark.value = {
-      title: '',
-      url: '',
-      description: '',
-      category: '',
-      parentId: '',
-    };
-
-    showAddBookmark.value = false;
     await loadBookmarks();
     message.success('添加成功');
   } catch (error) {
@@ -679,20 +295,13 @@ const addBookmark = async () => {
   }
 };
 
-const addFolder = async () => {
+const addFolder = async (formData: any) => {
   try {
     const folder = await bookmarkService.createFolder(
-      newFolder.value.title,
-      newFolder.value.parentId || undefined
+      formData.title,
+      formData.parentId || undefined
     );
 
-    // 重置表单
-    newFolder.value = {
-      title: '',
-      parentId: '',
-    };
-
-    showAddFolder.value = false;
     await loadBookmarks();
     message.success('创建成功');
   } catch (error) {
@@ -869,8 +478,9 @@ const loadSettings = async () => {
   }
 };
 
-const saveSettings = async () => {
+const saveSettings = async (newSettings: UserSettings) => {
   try {
+    settings.value = { ...newSettings };
     await storageService.saveSettings(settings.value);
     theme.value = settings.value.theme;
     layout.value = settings.value.layout;
@@ -879,7 +489,6 @@ const saveSettings = async () => {
       aiService.setApiKey(settings.value.aiApiKey);
     }
 
-    showSettings.value = false;
     message.success('设置保存成功');
   } catch (error) {
     console.error('保存设置失败:', error);
@@ -911,346 +520,4 @@ onMounted(async () => {
   console.log('NewTab组件初始化完成');
 });
 </script>
-
-<style scoped>
-/* 全局容器 */
-.newtab-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--n-body-color);
-}
-
-/* 头部样式 */
-.header {
-  height: 64px;
-  background: var(--n-card-color);
-  border-bottom: 1px solid var(--n-border-color);
-  z-index: 100;
-}
-
-.header-content {
-  padding: 0 24px;
-  height: 100%;
-}
-
-.title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--n-text-color);
-}
-
-/* 主布局 */
-.main-layout {
-  flex: 1;
-  overflow: hidden;
-}
-
-/* 侧边栏 */
-.sidebar {
-  background: var(--n-card-color);
-  border-right: 1px solid var(--n-border-color);
-}
-
-.sidebar-content {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 0;
-}
-
-/* 全部书签区域 */
-.all-bookmarks-section {
-  padding: 0 12px;
-  margin-bottom: 12px;
-}
-
-.all-bookmarks-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.all-bookmarks-item {
-  flex: 1;
-  background: transparent;
-  color: var(--n-text-color);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  min-height: 40px;
-}
-
-.all-bookmarks-item:hover {
-  background: var(--n-color-target);
-}
-
-.all-bookmarks-item.selected {
-  background: var(--n-primary-color-suppl);
-  color: var(--n-primary-color);
-}
-
-.all-bookmarks-content {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  gap: 10px;
-}
-
-.all-bookmarks-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.all-bookmarks-label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.all-bookmarks-count {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.add-folder-btn {
-  flex-shrink: 0;
-}
-
-/* 侧边栏树形结构 */
-.sidebar-tree {
-  flex: 1;
-  overflow: hidden;
-  padding: 0 4px;
-}
-
-/* 内容区域 */
-.content {
-  background: var(--n-body-color);
-  overflow: hidden;
-}
-
-.content-scrollbar {
-  height: 100%;
-}
-
-.content-wrapper {
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* 搜索栏 */
-.search-bar {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  align-items: flex-start;
-}
-
-.search-section {
-  flex: 1;
-}
-
-.search-input {
-  width: 100%;
-}
-
-.search-icon {
-  color: var(--n-text-color-3);
-}
-
-.controls-section {
-  flex-shrink: 0;
-}
-
-/* 搜索结果提示 */
-.search-result-info {
-  margin-bottom: 16px;
-  padding: 8px 0;
-}
-
-/* 书签容器 */
-.bookmarks-container {
-  position: relative;
-  min-height: 200px;
-}
-
-/* 加载状态 */
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-}
-
-.loading-content {
-  text-align: center;
-  color: var(--n-text-color-3);
-}
-
-/* 空状态 */
-.empty-state {
-  min-height: 300px;
-}
-
-/* 书签网格/列表 */
-.bookmarks-grid {
-  display: grid;
-  gap: 16px;
-}
-
-.bookmarks-grid.grid {
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-}
-
-.bookmarks-grid.list {
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-/* 书签卡片 */
-.bookmark-card {
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.bookmark-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* 深色模式下的阴影 */
-:global([data-theme="dark"]) .bookmark-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.bookmark-icon {
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.bookmark-title-container {
-  flex: 1;
-  min-width: 0;
-}
-
-.bookmark-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--n-text-color);
-  line-height: 1.4;
-}
-
-.bookmark-url {
-  font-size: 12px;
-  color: var(--n-text-color-3);
-  margin-top: 2px;
-  line-height: 1.3;
-}
-
-/* 书签元数据 */
-.bookmark-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.category-tag {
-  flex-shrink: 0;
-}
-
-.bookmark-tags {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .content-wrapper {
-    padding: 16px;
-  }
-
-  .search-bar {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .bookmarks-grid.grid {
-    grid-template-columns: 1fr;
-  }
-
-  .header-content {
-    padding: 0 16px;
-  }
-
-  .title {
-    font-size: 18px;
-  }
-}
-
-/* 列表视图特殊样式 */
-.bookmarks-grid.list .bookmark-card {
-  padding: 12px 16px;
-}
-
-.bookmarks-grid.list .bookmark-card :deep(.n-card__content) {
-  padding: 0;
-}
-
-.bookmarks-grid.list .bookmark-card :deep(.n-card-header) {
-  padding: 0;
-}
-
-.bookmarks-grid.list .bookmark-card :deep(.n-card-header__main) {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 对话框样式优化 */
-:deep(.n-modal) {
-  max-width: 90vw;
-}
-
-:deep(.n-dialog) {
-  max-width: 500px;
-}
-
-/* 表单样式 */
-:deep(.n-form-item-label) {
-  font-weight: 500;
-}
-
-:deep(.n-input) {
-  transition: all 0.2s ease;
-}
-
-:deep(.n-select) {
-  transition: all 0.2s ease;
-}
-
-/* 按钮组样式 */
-:deep(.n-button-group) {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* 滚动条样式优化 */
-:deep(.n-scrollbar-rail) {
-  right: 2px;
-}
-
-:deep(.n-scrollbar-rail--vertical) {
-  width: 6px;
-}
-
-:deep(.n-scrollbar-rail__scrollbar) {
-  border-radius: 3px;
-  background: var(--n-scrollbar-color);
-}
-</style>
 
