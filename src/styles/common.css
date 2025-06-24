@@ -632,6 +632,12 @@ html, body {
 .text-xl { font-size: 20px; }
 .text-2xl { font-size: 24px; }
 
+/* 高度工具类 */
+.h-24 { height: 96px; }
+
+/* 宽度工具类 */
+.w-96 { width: 384px; }
+
 .font-light { font-weight: 300; }
 .font-normal { font-weight: 400; }
 .font-medium { font-weight: 500; }
@@ -804,4 +810,510 @@ html, body {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ==================== 组件特定样式类 ==================== */
+
+/* Popup页面样式 */
+.popup-scrollbar {
+  max-height: 600px;
+}
+
+.popup-container {
+  width: 400px;
+  padding: 16px;
+}
+
+.popup-header {
+  margin-bottom: 16px;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.current-page-card {
+  margin-bottom: 16px;
+}
+
+.page-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.page-url {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.ai-result {
+  margin-top: 12px;
+}
+
+.ai-description {
+  font-size: 0.875rem;
+  color: var(--text-color-2);
+  line-height: 1.4;
+}
+
+.search-input {
+  margin-bottom: 16px;
+}
+
+.bookmarks-section {
+  margin-bottom: 16px;
+}
+
+.section-header {
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.bookmarks-list-scrollbar {
+  max-height: 300px;
+}
+
+.bookmarks-list {
+  padding-right: 8px;
+}
+
+.bookmark-item {
+  padding: 8px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.bookmark-item:hover {
+  background-color: var(--action-color-hover);
+}
+
+.bookmark-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.bookmark-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-url {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.bookmark-category {
+  margin-top: 4px;
+}
+
+.quick-actions {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+/* 树组件基础样式 */
+.tree-node-wrapper {
+  position: relative;
+  margin: 1px 0;
+}
+
+.tree-item {
+  position: relative;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.tree-item:hover {
+  background: var(--action-color-hover);
+}
+
+.tree-item.selected {
+  background: var(--primary-color-suppl);
+  color: var(--primary-color);
+}
+
+.tree-item.dragging {
+  opacity: 0.5;
+}
+
+.tree-item.drag-over-inside {
+  background: rgba(var(--info-color-rgb), 0.1);
+  border: 1px dashed var(--info-color);
+  border-radius: 6px;
+}
+
+.tree-item-content {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  width: 100%;
+  gap: 8px;
+}
+
+.tree-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--text-color-2);
+  transition: color 0.2s ease;
+}
+
+.tree-item.selected .tree-icon {
+  color: var(--primary-color);
+}
+
+.tree-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color);
+  line-height: 1.4;
+}
+
+.tree-item.selected .tree-label {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.tree-count {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.tree-item.selected .tree-count {
+  opacity: 0.8;
+}
+
+/* 树节点项目样式 */
+.tree-node-item {
+  position: relative;
+}
+
+.children-container {
+  position: relative;
+  margin-left: 0;
+}
+
+.children-container .tree-node-item {
+  position: relative;
+}
+
+.children-container .tree-item.folder-item {
+  margin-left: 16px;
+  position: relative;
+}
+
+.children-container .tree-item.folder-item::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  width: 1px;
+  height: 100%;
+  background: var(--border-color);
+  opacity: 0.3;
+}
+
+.tree-item.folder-item {
+  background: transparent;
+  color: var(--text-color);
+  border-radius: 6px;
+  margin: 2px 0;
+  min-height: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tree-item.folder-item:hover {
+  background: var(--action-color-hover);
+}
+
+.tree-item.folder-item.selected {
+  background: var(--primary-color-suppl);
+  color: var(--primary-color);
+}
+
+/* 拖拽位置指示器 */
+.drop-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+  z-index: 100;
+}
+
+.drop-line-before {
+  top: -1px;
+}
+
+.drop-line-after {
+  bottom: -1px;
+}
+
+/* 拖拽样式 */
+.usage-tip {
+  padding: 8px 12px;
+  margin: 4px 0;
+  background: var(--action-color);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary-color);
+}
+
+.drag-sortable-tree {
+  height: 100%;
+  overflow: hidden;
+}
+
+.tree-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.tree-item.all-bookmarks {
+  background: transparent;
+  color: var(--text-color);
+  font-weight: 500;
+  border-radius: 6px;
+  margin: 4px 0 8px 0;
+  min-height: 40px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tree-item.all-bookmarks:hover {
+  background: var(--action-color-hover);
+}
+
+.tree-item.all-bookmarks.selected {
+  background: var(--primary-color-suppl);
+  color: var(--primary-color);
+}
+
+.sortable-container {
+  position: relative;
+}
+
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--action-color);
+}
+
+.sortable-chosen {
+  cursor: grabbing;
+}
+
+.sortable-drag {
+  opacity: 0.9;
+  transform: rotate(1deg) scale(1.02);
+  box-shadow: var(--box-shadow-2);
+  z-index: 2000;
+  border-radius: 6px;
+  background: var(--card-color);
+}
+
+.nested-container {
+  min-height: 20px;
+}
+
+.nested-folder-item {
+  position: relative;
+}
+
+/* 书签树页面样式 */
+.bookmark-tree {
+  height: 100%;
+  position: relative;
+}
+
+.modern-tree {
+  height: 100%;
+}
+
+/* 深色模式适配 */
+[data-theme="dark"] .tree-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .tree-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .sortable-drag {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .tree-item {
+    min-height: 40px;
+  }
+
+  .tree-item-content {
+    padding: 10px 12px;
+  }
+
+  .tree-icon {
+    font-size: 18px;
+  }
+
+  .popup-container {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+/* BookmarkTree 页面深度样式 */
+.bookmark-tree :deep(.n-tree-node-content) {
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 1px 0;
+}
+
+.bookmark-tree :deep(.n-tree-node-content:hover) {
+  background: var(--action-color-hover);
+}
+
+.bookmark-tree :deep(.n-tree-node--selected .n-tree-node-content) {
+  background: var(--primary-color-suppl);
+  color: var(--primary-color);
+}
+
+.bookmark-tree :deep(.n-tree-node-content) {
+  cursor: grab;
+}
+
+.bookmark-tree :deep(.n-tree-node-content:active) {
+  cursor: grabbing;
+}
+
+.bookmark-tree :deep(.n-tree-node--dragging) {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  z-index: 1000;
+}
+
+.bookmark-tree :deep(.n-tree-node--drop-allowed) {
+  background: rgba(var(--success-color-rgb), 0.1);
+  border: 1px solid var(--success-color);
+  border-radius: 6px;
+}
+
+.bookmark-tree :deep(.n-tree-node--drop-not-allowed) {
+  background: rgba(var(--error-color-rgb), 0.1);
+  border: 1px solid var(--error-color);
+  border-radius: 6px;
+}
+
+.bookmark-tree :deep(.n-tree-node--drop-position-inside) {
+  background: rgba(var(--info-color-rgb), 0.15);
+  border: 2px solid var(--info-color);
+  border-radius: 8px;
+  transform: scale(1.02);
+}
+
+.bookmark-tree :deep(.n-tree-node--drop-position-before::before) {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+  z-index: 100;
+}
+
+.bookmark-tree :deep(.n-tree-node--drop-position-after::after) {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+  z-index: 100;
+}
+
+.bookmark-tree :deep(.tree-icon) {
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.bookmark-tree :deep(.tree-icon.expanded) {
+  transform: rotate(15deg);
+}
+
+.bookmark-tree :deep(.tree-label) {
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.bookmark-tree :deep(.all-bookmarks-label) {
+  font-weight: 600;
+}
+
+.bookmark-tree :deep(.folder-label) {
+  font-weight: 500;
+}
+
+.bookmark-tree :deep(.tree-count) {
+  opacity: 0.7;
+  margin-left: 8px;
+}
+
+.bookmark-tree :deep(.n-tree-node) {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+[data-theme="dark"] .bookmark-tree :deep(.n-tree-node-content:hover) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .bookmark-tree :deep(.n-tree-node-content:hover) {
+  background: rgba(0, 0, 0, 0.05);
 }

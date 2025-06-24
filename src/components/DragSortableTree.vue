@@ -2,7 +2,7 @@
   <div class="drag-sortable-tree">
     <!-- 使用提示 -->
     <div v-if="!hideAllBookmarks && nestedTreeData.length > 0" class="usage-tip">
-      <n-text depth="3" style="font-size: 12px;">
+      <n-text depth="3" class="text-xs">
         💡 提示：拖拽文件夹进行排序，Chrome会自动移动其所有子内容。智能防护确保不会移动到错误位置。
       </n-text>
     </div>
@@ -252,110 +252,3 @@ const countTotalItemsInFolder = async (folderId: string): Promise<{folders: numb
 };
 </script>
 
-<style scoped>
-/* 使用提示 */
-.usage-tip {
-  padding: 8px 12px;
-  margin: 4px 0;
-  background: var(--n-color-target);
-  border-radius: 6px;
-  border-left: 3px solid var(--n-primary-color);
-}
-
-.drag-sortable-tree {
-  height: 100%;
-  overflow: hidden;
-}
-
-.tree-container {
-  height: 100%;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-/* 全部书签样式 */
-.tree-item.all-bookmarks {
-  background: transparent;
-  color: var(--n-text-color);
-  font-weight: 500;
-  border-radius: 6px;
-  margin: 4px 0 8px 0;
-  min-height: 40px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tree-item.all-bookmarks:hover {
-  background: var(--n-color-target);
-}
-
-.tree-item.all-bookmarks.selected {
-  background: var(--n-primary-color-suppl);
-  color: var(--n-primary-color);
-}
-
-/* 树项目内容 */
-.tree-item-content {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.tree-icon {
-  font-size: 16px;
-  margin-right: 10px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-}
-
-.tree-label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.tree-count {
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.7;
-}
-
-/* 拖拽容器样式 */
-.sortable-container {
-  position: relative;
-}
-
-/* 拖拽状态样式 */
-.sortable-ghost {
-  opacity: 0.4;
-  background: var(--n-color-target);
-}
-
-.sortable-chosen {
-  cursor: grabbing;
-}
-
-.sortable-drag {
-  opacity: 0.9;
-  transform: rotate(1deg) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 2000;
-  border-radius: 6px;
-  background: var(--n-card-color);
-}
-
-/* 这些样式已移到TreeNodeItem.vue中 */
-
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .sortable-drag {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
-}
-</style>

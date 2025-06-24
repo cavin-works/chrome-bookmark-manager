@@ -129,7 +129,7 @@
 
           <!-- 加载状态 -->
           <n-spin v-if="loading" :show="loading" size="small">
-            <div style="height: 100px;"></div>
+            <div class="h-24"></div>
           </n-spin>
 
           <!-- 空状态 -->
@@ -199,7 +199,7 @@
 
         <!-- 添加书签对话框 -->
         <n-modal v-model:show="showAddBookmark">
-          <n-card style="width: 400px" title="添加书签">
+          <n-card class="w-96" title="添加书签">
             <n-form :model="newBookmark">
               <n-form-item label="标题" required>
                 <n-input v-model:value="newBookmark.title" />
@@ -226,7 +226,7 @@
 
         <!-- 设置对话框 -->
         <n-modal v-model:show="showSettings">
-          <n-card style="width: 400px" title="设置">
+          <n-card class="w-96" title="设置">
             <n-form :model="settings">
               <n-form-item label="主题">
                 <n-select v-model:value="settings.theme" :options="themeOptions" />
@@ -562,122 +562,4 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
-.popup-scrollbar {
-  max-height: 600px;
-}
 
-.popup-container {
-  width: 400px;
-  padding: 16px;
-}
-
-.popup-header {
-  margin-bottom: 16px;
-}
-
-.popup-title {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.current-page-card {
-  margin-bottom: 16px;
-}
-
-.page-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.page-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.page-url {
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
-
-.ai-result {
-  margin-top: 12px;
-}
-
-.ai-description {
-  font-size: 0.875rem;
-  color: var(--text-color-secondary);
-  line-height: 1.4;
-}
-
-.search-input {
-  margin-bottom: 16px;
-}
-
-.bookmarks-section {
-  margin-bottom: 16px;
-}
-
-.section-header {
-  margin-bottom: 12px;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.bookmarks-list-scrollbar {
-  max-height: 300px;
-}
-
-.bookmarks-list {
-  padding-right: 8px;
-}
-
-.bookmark-item {
-  padding: 8px;
-  margin-bottom: 4px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.bookmark-item:hover {
-  background-color: var(--hover-color);
-}
-
-.bookmark-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.bookmark-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-bottom: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bookmark-url {
-  font-size: 0.75rem;
-  opacity: 0.7;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 4px;
-}
-
-.bookmark-category {
-  margin-top: 4px;
-}
-
-.quick-actions {
-  border-top: 1px solid var(--border-color);
-  padding-top: 12px;
-}
-</style>
