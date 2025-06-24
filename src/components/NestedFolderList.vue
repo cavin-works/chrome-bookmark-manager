@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineOptions } from 'vue';
+import { computed } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
