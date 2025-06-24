@@ -1,323 +1,245 @@
 <template>
-  <n-config-provider :theme="currentTheme">
-    <n-message-provider>
-      <n-scrollbar class="popup-scrollbar">
-        <div class="popup-container">
-        <!-- 头部 -->
-        <n-space justify="space-between" align="center" class="popup-header">
-          <h2 class="popup-title">Humi Bookmarks</h2>
-          <n-button
-            circle
-            quaternary
-            size="small"
-            @click="toggleTheme"
-            :title="theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
-          >
-            <template #icon>
-              <n-icon>
-                <SunnyOutline v-if="theme === 'dark'" />
-                <MoonOutline v-else />
-              </n-icon>
-            </template>
-          </n-button>
-        </n-space>
-
-        <!-- 当前页面信息 -->
-        <n-card v-if="currentPage" class="current-page-card" size="small">
-          <template #header>
-            <n-space align="center">
-              <n-avatar
-                :size="24"
-                :src="currentPage.icon || '/icon/default.png'"
-                fallback-src="/icon/default.png"
-              />
-              <div class="page-info">
-                <n-ellipsis class="page-title">{{ currentPage.title }}</n-ellipsis>
-                <n-ellipsis class="page-url">{{ currentPage.url }}</n-ellipsis>
-              </div>
-            </n-space>
-          </template>
-
-          <template #header-extra>
-            <n-button
-              v-if="!isBookmarked"
-              type="primary"
-              size="small"
-              @click="addCurrentPage"
-              :loading="adding"
+  <div :class="cn('w-80 bg-background text-foreground', isDarkMode && 'dark')">
+    <ToastProvider>
+      <ScrollArea class="h-96">
+        <div class="p-4 space-y-4">
+          <!-- 头部 -->
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">Humi Bookmarks</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              @click="toggleTheme"
+              :title="theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
             >
-              <template #icon>
-                <n-icon>
-                  <BookmarkOutline />
-                </n-icon>
-              </template>
-              收藏
-            </n-button>
-            <n-button
-              v-else
-              type="warning"
-              size="small"
-              @click="removeCurrentPage"
-              :loading="removing"
-            >
-              <template #icon>
-                <n-icon>
-                  <BookmarksOutline />
-                </n-icon>
-              </template>
-              已收藏
-            </n-button>
-          </template>
-
-          <!-- AI分类结果 -->
-          <div v-if="aiResult" class="ai-result">
-            <n-space vertical size="small">
-              <n-space>
-                <n-tag type="warning" size="small">
-                  {{ aiResult.category }}
-                </n-tag>
-              </n-space>
-              <n-space>
-                <n-tag
-                  v-for="tag in aiResult.tags?.slice(0, 3)"
-                  :key="tag"
-                  type="info"
-                  size="small"
-                >
-                  {{ tag }}
-                </n-tag>
-              </n-space>
-              <div v-if="aiResult.description" class="ai-description">
-                {{ aiResult.description }}
-              </div>
-            </n-space>
+              <Sun v-if="theme === 'dark'" class="h-4 w-4" />
+              <Moon v-else class="h-4 w-4" />
+            </Button>
           </div>
-        </n-card>
 
-        <!-- 搜索框 -->
-        <n-input
-          v-model:value="searchQuery"
-          placeholder="搜索书签..."
-          clearable
-          class="search-input"
-        >
-          <template #prefix>
-            <n-icon>
-              <SearchOutline />
-            </n-icon>
-          </template>
-        </n-input>
-
-        <!-- 最近书签 -->
-        <div class="bookmarks-section">
-          <n-space justify="space-between" align="center" class="section-header">
-            <h3>{{ searchQuery ? '搜索结果' : '最近书签' }}</h3>
-            <n-button
-              text
-              size="small"
-              @click="openNewTab"
-              title="打开新标签页"
-            >
-              <template #icon>
-                <n-icon>
-                  <GridOutline />
-                </n-icon>
-              </template>
-              全部
-            </n-button>
-          </n-space>
-
-          <!-- 加载状态 -->
-          <n-spin v-if="loading" :show="loading" size="small">
-            <div class="h-24"></div>
-          </n-spin>
-
-          <!-- 空状态 -->
-          <n-empty
-            v-else-if="displayBookmarks.length === 0"
-            size="small"
-            :description="searchQuery ? '没有找到匹配的书签' : '暂无书签'"
-          />
-
-          <!-- 书签列表 -->
-          <n-scrollbar v-else class="bookmarks-list-scrollbar">
-            <div class="bookmarks-list">
-              <div
-                v-for="bookmark in displayBookmarks"
-                :key="bookmark.id"
-                class="bookmark-item"
-                @click="openBookmark(bookmark)"
-              >
-              <n-space align="center">
-                <n-avatar
-                  :size="20"
-                  :src="bookmark.icon || '/icon/default.png'"
-                  fallback-src="/icon/default.png"
+          <!-- 当前页面信息 -->
+          <Card v-if="currentPage" class="border">
+            <CardHeader class="pb-2">
+              <div class="flex items-center space-x-2">
+                <img
+                  :src="currentPage.icon || '/icon/default.png'"
+                  @error="(e) => e.target.src = '/icon/default.png'"
+                  class="w-6 h-6 rounded"
+                  alt="Page icon"
                 />
-                <div class="bookmark-content">
-                  <div class="bookmark-title">{{ bookmark.title }}</div>
-                  <div class="bookmark-url">{{ bookmark.url }}</div>
-                  <div v-if="bookmark.category" class="bookmark-category">
-                    <n-tag type="warning" size="tiny">{{ bookmark.category }}</n-tag>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium truncate">{{ currentPage.title }}</div>
+                  <div class="text-xs text-muted-foreground truncate">{{ currentPage.url }}</div>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent class="pt-0">
+              <div class="flex justify-end">
+                <Button
+                  v-if="!isBookmarked"
+                  size="sm"
+                  @click="addCurrentPage"
+                  :disabled="adding"
+                >
+                  <Bookmark class="h-4 w-4 mr-1" />
+                  收藏
+                </Button>
+                <Button
+                  v-else
+                  variant="outline"
+                  size="sm"
+                  @click="removeCurrentPage"
+                  :disabled="removing"
+                >
+                  <BookmarkCheck class="h-4 w-4 mr-1" />
+                  已收藏
+                </Button>
+              </div>
+
+              <!-- AI分类结果 -->
+              <div v-if="aiResult" class="mt-3 space-y-2">
+                <Badge variant="secondary">
+                  {{ aiResult.category }}
+                </Badge>
+                <div v-if="aiResult.tags?.length" class="flex flex-wrap gap-1">
+                  <Badge
+                    v-for="tag in aiResult.tags.slice(0, 3)"
+                    :key="tag"
+                    variant="outline"
+                    class="text-xs"
+                  >
+                    {{ tag }}
+                  </Badge>
+                </div>
+                <div v-if="aiResult.description" class="text-xs text-muted-foreground">
+                  {{ aiResult.description }}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- 搜索框 -->
+          <div class="relative">
+            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              v-model="searchQuery"
+              placeholder="搜索书签..."
+              class="pl-10"
+            />
+          </div>
+
+          <!-- 最近书签 -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium">
+                {{ searchQuery ? '搜索结果' : '最近书签' }}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                @click="openNewTab"
+                title="打开新标签页"
+              >
+                <Grid3X3 class="h-4 w-4 mr-1" />
+                全部
+              </Button>
+            </div>
+
+            <!-- 加载状态 -->
+            <div v-if="loading" class="flex justify-center py-4">
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+
+            <!-- 空状态 -->
+            <div
+              v-else-if="displayBookmarks.length === 0"
+              class="text-center py-6 text-muted-foreground"
+            >
+              <div class="text-sm">
+                {{ searchQuery ? '没有找到匹配的书签' : '暂无书签' }}
+              </div>
+            </div>
+
+            <!-- 书签列表 -->
+            <ScrollArea v-else class="h-48">
+              <div class="space-y-1">
+                <div
+                  v-for="bookmark in displayBookmarks"
+                  :key="bookmark.id"
+                  class="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                  @click="openBookmark(bookmark)"
+                >
+                  <img
+                    :src="bookmark.icon || '/icon/default.png'"
+                    @error="(e) => e.target.src = '/icon/default.png'"
+                    class="w-4 h-4 rounded flex-shrink-0"
+                    alt="Bookmark icon"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ bookmark.title }}</div>
+                    <div class="text-xs text-muted-foreground truncate">{{ bookmark.url }}</div>
+                    <div v-if="bookmark.category" class="mt-1">
+                      <Badge variant="secondary" class="text-xs">
+                        {{ bookmark.category }}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-              </n-space>
-            </div>
-            </div>
-          </n-scrollbar>
-        </div>
+              </div>
+            </ScrollArea>
+          </div>
 
-        <!-- 快捷操作 -->
-        <div class="quick-actions">
-          <n-space>
-            <n-button
-              size="small"
+          <!-- 快捷操作 -->
+          <div class="flex space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
               @click="showAddBookmark = true"
               title="添加书签"
+              class="flex-1"
             >
-              <template #icon>
-                <n-icon>
-                  <AddOutline />
-                </n-icon>
-              </template>
+              <Plus class="h-4 w-4 mr-1" />
               添加
-            </n-button>
-            <n-button
-              size="small"
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               @click="showSettings = true"
               title="设置"
+              class="flex-1"
             >
-              <template #icon>
-                <n-icon>
-                  <SettingsOutline />
-                </n-icon>
-              </template>
+              <Settings class="h-4 w-4 mr-1" />
               设置
-            </n-button>
-          </n-space>
+            </Button>
+          </div>
+
+          <!-- 对话框组件 -->
+          <AddBookmarkDialog
+            v-model:show="showAddBookmark"
+            :category-options="categoryOptions"
+            :folder-options="folderOptions"
+            @confirm="addBookmark"
+          />
+
+          <SettingsDialog
+            v-model:show="showSettings"
+            :settings="settings"
+            @confirm="saveSettings"
+          />
         </div>
+      </ScrollArea>
 
-        <!-- 添加书签对话框 -->
-        <n-modal v-model:show="showAddBookmark">
-          <n-card class="w-96" title="添加书签">
-            <n-form :model="newBookmark">
-              <n-form-item label="标题" required>
-                <n-input v-model:value="newBookmark.title" />
-              </n-form-item>
-              <n-form-item label="URL" required>
-                <n-input v-model:value="newBookmark.url" />
-              </n-form-item>
-              <n-form-item label="文件夹">
-                <n-select
-                  v-model:value="newBookmark.parentId"
-                  :options="folderOptions"
-                  clearable
-                />
-              </n-form-item>
-            </n-form>
-            <template #footer>
-              <n-space justify="end">
-                <n-button @click="showAddBookmark = false">取消</n-button>
-                <n-button type="primary" @click="addBookmark">添加</n-button>
-              </n-space>
-            </template>
-          </n-card>
-        </n-modal>
-
-        <!-- 设置对话框 -->
-        <n-modal v-model:show="showSettings">
-          <n-card class="w-96" title="设置">
-            <n-form :model="settings">
-              <n-form-item label="主题">
-                <n-select v-model:value="settings.theme" :options="themeOptions" />
-              </n-form-item>
-              <n-form-item label="自动分类">
-                <n-switch v-model:value="settings.autoCategorize" />
-              </n-form-item>
-              <n-form-item label="OpenAI API密钥">
-                <n-input
-                  v-model:value="settings.aiApiKey"
-                  type="password"
-                  placeholder="sk-..."
-                  show-password-on="click"
-                />
-              </n-form-item>
-            </n-form>
-            <template #footer>
-              <n-space justify="end">
-                <n-button @click="showSettings = false">取消</n-button>
-                <n-button type="primary" @click="saveSettings">保存</n-button>
-              </n-space>
-            </template>
-          </n-card>
-        </n-modal>
-      </div>
-      </n-scrollbar>
-    </n-message-provider>
-  </n-config-provider>
+      <Toaster />
+    </ToastProvider>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import {
-  NConfigProvider,
-  NMessageProvider,
-  NSpace,
-  NButton,
-  NIcon,
-  NInput,
-  NCard,
-  NAvatar,
-  NEllipsis,
-  NTag,
-  NModal,
-  NForm,
-  NFormItem,
-  NSelect,
-  NSwitch,
-  NSpin,
-  NEmpty,
-  NScrollbar,
-  darkTheme,
-  lightTheme
-} from 'naive-ui';
+  Sun,
+  Moon,
+  Bookmark,
+  BookmarkCheck,
+  Search,
+  Grid3X3,
+  Plus,
+  Settings
+} from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ToastProvider } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toast';
+import { useToast } from '@/components/ui/toast/use-toast';
+import { cn } from '@/lib/utils';
 
-import {
-  SearchOutline,
-  BookmarkOutline,
-  BookmarksOutline,
-  AddOutline,
-  SettingsOutline,
-  SunnyOutline,
-  MoonOutline,
-  GridOutline
-} from '@vicons/ionicons5';
-
-import { Bookmark, UserSettings, AIResult } from '../utils/types';
+import { Bookmark as BookmarkType, UserSettings } from '../utils/types';
 import { bookmarkService } from '../services/bookmarkService';
-import { iconService } from '../services/iconService';
 import { aiService } from '../services/aiService';
+import { iconService } from '../services/iconService';
 import { storageService } from '../services/storageService';
 import { getSystemTheme } from '../utils/helpers';
-import { message } from '../utils/naive-ui';
+
+// 组件导入
+import AddBookmarkDialog from '../components/AddBookmarkDialog.vue';
+import SettingsDialog from '../components/SettingsDialog.vue';
 
 // 响应式数据
-const bookmarks = ref<Bookmark[]>([]);
-const bookmarkFolders = ref<Bookmark[]>([]);
+const bookmarks = ref<BookmarkType[]>([]);
 const loading = ref(true);
+const searchQuery = ref('');
+const currentPage = ref<any>(null);
+const theme = ref<'light' | 'dark' | 'auto'>('auto');
+const isBookmarked = ref(false);
 const adding = ref(false);
 const removing = ref(false);
-const searchQuery = ref('');
-const theme = ref<'light' | 'dark' | 'auto'>('auto');
+const aiResult = ref<any>(null);
 const showAddBookmark = ref(false);
 const showSettings = ref(false);
-const currentPage = ref<{
-  title: string;
-  url: string;
-  icon?: string;
-} | null>(null);
-const aiResult = ref<AIResult | null>(null);
-
 const settings = ref<UserSettings>({
   theme: 'auto',
   layout: 'grid',
@@ -326,66 +248,74 @@ const settings = ref<UserSettings>({
   autoCategorize: true,
 });
 
-const newBookmark = ref({
-  title: '',
-  url: '',
-  parentId: '',
-});
+// Toast
+const { toast } = useToast();
 
 // 计算属性
-const currentTheme = computed(() => {
+const isDarkMode = computed(() => {
   if (theme.value === 'auto') {
-    return getSystemTheme() === 'dark' ? darkTheme : lightTheme;
+    return getSystemTheme() === 'dark';
   }
-  return theme.value === 'dark' ? darkTheme : lightTheme;
+  return theme.value === 'dark';
 });
 
-const isBookmarked = computed(() => {
-  if (!currentPage.value) return false;
-  return bookmarks.value.some(bookmark => bookmark.url === currentPage.value?.url);
+// 获取分类选项
+const categories = computed(() => {
+  const categorySet = new Set<string>();
+  bookmarks.value.forEach(bookmark => {
+    if (bookmark.category) {
+      categorySet.add(bookmark.category);
+    }
+  });
+  return Array.from(categorySet).sort();
 });
 
-const folderOptions = computed(() => [
-  { label: '默认位置', value: '' },
-  ...bookmarkFolders.value
-    .filter(folder => folder.title && folder.title.trim() !== '')
-    .map(folder => ({ label: folder.title, value: folder.id }))
+// 分类选项
+const categoryOptions = computed(() => [
+  { label: '自动分类', value: '' },
+  ...categories.value.map(category => ({ label: category, value: category }))
 ]);
 
-const themeOptions = [
-  { label: '跟随系统', value: 'auto' },
-  { label: '浅色', value: 'light' },
-  { label: '深色', value: 'dark' }
-];
+// 文件夹选项（简化版，只支持根目录）
+const folderOptions = computed(() => [
+  { label: '默认位置', value: '' }
+]);
 
+// 显示的书签列表
 const displayBookmarks = computed(() => {
   let filtered = bookmarks.value;
 
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(bookmark =>
-      bookmark.title.toLowerCase().includes(query) ||
-      bookmark.url?.toLowerCase().includes(query) ||
-      bookmark.category?.toLowerCase().includes(query)
-    );
-  } else {
-    // 显示最近的10个书签
-    filtered = filtered
-      .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
-      .slice(0, 10);
+    const query = searchQuery.value.toLowerCase().trim();
+    const keywords = query.split(/\s+/).filter(keyword => keyword.length > 0);
+
+    filtered = filtered.filter(bookmark => {
+      const searchableText = [
+        bookmark.title || '',
+        bookmark.url || '',
+        bookmark.description || '',
+        bookmark.category || '',
+        ...(bookmark.tags || [])
+      ].join(' ').toLowerCase();
+
+      return keywords.every(keyword => searchableText.includes(keyword));
+    });
   }
 
-  return filtered;
+  // 限制显示数量，按时间排序
+  return filtered
+    .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
+    .slice(0, 10);
 });
 
 // 方法
 const toggleTheme = () => {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
   settings.value.theme = theme.value;
-  saveSettings();
+  saveSettings(settings.value);
 };
 
-const openBookmark = (bookmark: Bookmark) => {
+const openBookmark = (bookmark: BookmarkType) => {
   if (bookmark.url) {
     chrome.tabs.create({ url: bookmark.url });
     window.close();
@@ -393,42 +323,74 @@ const openBookmark = (bookmark: Bookmark) => {
 };
 
 const openNewTab = () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') });
+  chrome.tabs.create({ url: 'newtab.html' });
   window.close();
+};
+
+const getCurrentPage = async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url && !tab.url.startsWith('chrome://')) {
+      currentPage.value = {
+        title: tab.title,
+        url: tab.url,
+        icon: tab.favIconUrl || '/icon/default.png'
+      };
+
+      // 检查是否已收藏
+      const existing = bookmarks.value.find(b => b.url === tab.url);
+      isBookmarked.value = !!existing;
+
+      // AI分析页面（如果启用）
+      if (settings.value.autoCategorize && !existing) {
+        try {
+          aiResult.value = await aiService.categorizeBookmark({
+            title: tab.title || '',
+            url: tab.url
+          });
+        } catch (error) {
+          console.error('AI分析失败:', error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('获取当前页面失败:', error);
+  }
 };
 
 const addCurrentPage = async () => {
   if (!currentPage.value) return;
 
+  adding.value = true;
   try {
-    adding.value = true;
-
-    const bookmark = await bookmarkService.createBookmark({
+    const bookmarkData = {
       title: currentPage.value.title,
       url: currentPage.value.url,
-    });
+    };
 
-    // AI自动分类
-    if (settings.value.autoCategorize && settings.value.aiApiKey) {
-      try {
-        const result = await aiService.categorizeBookmark(bookmark);
-        aiResult.value = result;
+    const bookmark = await bookmarkService.createBookmark(bookmarkData);
 
-        // 更新书签信息
-        await bookmarkService.updateBookmark(bookmark.id, {
-          title: bookmark.title,
-          url: bookmark.url,
-        });
-      } catch (error) {
-        console.error('AI分类失败:', error);
-      }
+    // 应用AI结果
+    if (aiResult.value) {
+      bookmark.category = aiResult.value.category;
+      bookmark.tags = aiResult.value.tags;
+      bookmark.description = aiResult.value.description;
     }
 
     await loadBookmarks();
-    message.success('收藏成功');
+    isBookmarked.value = true;
+
+    toast({
+      title: "收藏成功",
+      description: "页面已添加到书签",
+    });
   } catch (error) {
     console.error('添加书签失败:', error);
-    message.error('收藏失败');
+    toast({
+      title: "收藏失败",
+      description: "添加书签失败，请重试",
+      variant: "destructive",
+    });
   } finally {
     adding.value = false;
   }
@@ -437,86 +399,69 @@ const addCurrentPage = async () => {
 const removeCurrentPage = async () => {
   if (!currentPage.value) return;
 
+  removing.value = true;
   try {
-    removing.value = true;
-
-    const bookmark = bookmarks.value.find(b => b.url === currentPage.value?.url);
-    if (bookmark) {
-      await bookmarkService.deleteBookmark(bookmark.id);
+    const existing = bookmarks.value.find(b => b.url === currentPage.value.url);
+    if (existing) {
+      await bookmarkService.deleteBookmark(existing.id);
       await loadBookmarks();
-      aiResult.value = null;
-      message.success('取消收藏成功');
+      isBookmarked.value = false;
+
+      toast({
+        title: "已取消收藏",
+        description: "书签已删除",
+      });
     }
   } catch (error) {
     console.error('删除书签失败:', error);
-    message.error('取消收藏失败');
+    toast({
+      title: "删除失败",
+      description: "删除书签失败，请重试",
+      variant: "destructive",
+    });
   } finally {
     removing.value = false;
   }
 };
 
-const addBookmark = async () => {
+const addBookmark = async (formData: any) => {
   try {
-    await bookmarkService.createBookmark({
-      title: newBookmark.value.title,
-      url: newBookmark.value.url,
-      parentId: newBookmark.value.parentId || undefined,
-    });
+    const bookmarkData = {
+      title: formData.title,
+      url: formData.url,
+      parentId: formData.parentId || undefined,
+    };
 
-    newBookmark.value = { title: '', url: '', parentId: '' };
-    showAddBookmark.value = false;
+    await bookmarkService.createBookmark(bookmarkData);
     await loadBookmarks();
-    message.success('添加成功');
-  } catch (error) {
-    message.error('添加失败');
-  }
-};
 
-const loadCurrentPage = async () => {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.title && tab.url) {
-      currentPage.value = {
-        title: tab.title,
-        url: tab.url,
-      };
-
-      // 获取页面图标
-      try {
-        const icon = await iconService.getBookmarkIcon(tab.url);
-        if (currentPage.value) {
-          currentPage.value.icon = icon;
-        }
-      } catch (error) {
-        console.warn('获取页面图标失败:', error);
-      }
-    }
+    toast({
+      title: "添加成功",
+      description: "书签已添加",
+    });
   } catch (error) {
-    console.error('获取当前页面信息失败:', error);
+    console.error('添加书签失败:', error);
+    toast({
+      title: "添加失败",
+      description: "添加书签失败，请重试",
+      variant: "destructive",
+    });
   }
 };
 
 const loadBookmarks = async () => {
   try {
     loading.value = true;
-
     const allBookmarks = await bookmarkService.getAllBookmarks();
-    const folders = await bookmarkService.getBookmarkFolders();
 
-    // 加载图标
-    const iconPromises = allBookmarks.map(async (bookmark) => {
-      if (bookmark.url) {
-        try {
-          bookmark.icon = await iconService.getBookmarkIcon(bookmark.url);
-        } catch (error) {
-          bookmark.icon = '/icon/default.png';
-        }
+    // 设置默认图标
+    allBookmarks.forEach(bookmark => {
+      if (bookmark.url && !bookmark.icon) {
+        bookmark.icon = '/icon/default.png';
       }
     });
-    await Promise.all(iconPromises);
 
     bookmarks.value = allBookmarks;
-    bookmarkFolders.value = folders.filter(f => f.title && f.title.trim() !== '');
   } catch (error) {
     console.error('加载书签失败:', error);
   } finally {
@@ -538,8 +483,9 @@ const loadSettings = async () => {
   }
 };
 
-const saveSettings = async () => {
+const saveSettings = async (newSettings: UserSettings) => {
   try {
+    settings.value = { ...newSettings };
     await storageService.saveSettings(settings.value);
     theme.value = settings.value.theme;
 
@@ -547,19 +493,24 @@ const saveSettings = async () => {
       aiService.setApiKey(settings.value.aiApiKey);
     }
 
-    showSettings.value = false;
-    message.success('设置保存成功');
+    toast({
+      title: "设置保存成功",
+      description: "您的设置已保存",
+    });
   } catch (error) {
-    message.error('保存设置失败');
+    console.error('保存设置失败:', error);
+    toast({
+      title: "保存失败",
+      description: "保存设置失败，请重试",
+      variant: "destructive",
+    });
   }
 };
 
 // 生命周期
 onMounted(async () => {
   await loadSettings();
-  await loadCurrentPage();
   await loadBookmarks();
+  await getCurrentPage();
 });
 </script>
-
-

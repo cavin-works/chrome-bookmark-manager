@@ -1,42 +1,136 @@
 <template>
-  <n-modal :show="show" preset="dialog" title="设置" @update:show="$emit('update:show', $event)">
-    <n-form :model="formData" label-placement="left" label-width="100">
-      <n-form-item label="主题">
-        <n-select v-model:value="formData.theme" :options="themeOptions" />
-      </n-form-item>
-      <n-form-item label="布局">
-        <n-select v-model:value="formData.layout" :options="layoutOptions" />
-      </n-form-item>
-      <n-form-item label="显示标签">
-        <n-switch v-model:value="formData.showTags" />
-      </n-form-item>
-      <n-form-item label="显示描述">
-        <n-switch v-model:value="formData.showDescriptions" />
-      </n-form-item>
-      <n-form-item label="自动分类">
-        <n-switch v-model:value="formData.autoCategorize" />
-      </n-form-item>
-      <n-form-item label="OpenAI API密钥">
-        <n-input
-          v-model:value="formData.aiApiKey"
-          type="password"
-          placeholder="sk-..."
-          show-password-on="click"
-        />
-      </n-form-item>
-    </n-form>
-    <template #action>
-      <n-space>
-        <n-button @click="handleCancel">取消</n-button>
-        <n-button type="primary" @click="handleConfirm">保存</n-button>
-      </n-space>
-    </template>
-  </n-modal>
+  <Dialog :open="show" @update:open="$emit('update:show', $event)">
+    <DialogContent class="sm:max-w-[500px]">
+      <DialogHeader>
+        <DialogTitle class="flex items-center gap-2">
+          <Settings class="h-5 w-5" />
+          设置
+        </DialogTitle>
+        <DialogDescription>
+          自定义您的书签管理体验。
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="grid gap-6 py-4">
+        <!-- 外观设置 -->
+        <div class="space-y-4">
+          <h4 class="text-sm font-medium text-foreground">外观</h4>
+          <div class="grid gap-4">
+            <div class="flex items-center justify-between">
+              <label for="theme" class="text-sm font-medium">主题</label>
+              <Select v-model="formData.theme">
+                <SelectTrigger class="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in themeOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label for="layout" class="text-sm font-medium">默认布局</label>
+              <Select v-model="formData.layout">
+                <SelectTrigger class="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in layoutOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 显示设置 -->
+        <Separator />
+        <div class="space-y-4">
+          <h4 class="text-sm font-medium text-foreground">显示选项</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label for="show-tags" class="text-sm font-medium">显示标签</label>
+              <Switch id="show-tags" v-model:checked="formData.showTags" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label for="show-desc" class="text-sm font-medium">显示描述</label>
+              <Switch id="show-desc" v-model:checked="formData.showDescriptions" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label for="auto-categorize" class="text-sm font-medium">自动分类</label>
+              <Switch id="auto-categorize" v-model:checked="formData.autoCategorize" />
+            </div>
+          </div>
+        </div>
+
+        <!-- AI 设置 -->
+        <Separator />
+        <div class="space-y-4">
+          <h4 class="text-sm font-medium text-foreground">AI 功能</h4>
+          <div class="grid gap-2">
+            <label for="api-key" class="text-sm font-medium">OpenAI API 密钥</label>
+            <Input
+              id="api-key"
+              v-model="formData.aiApiKey"
+              type="password"
+              placeholder="sk-..."
+              class="font-mono text-xs"
+            />
+            <p class="text-xs text-muted-foreground">
+              用于自动分类和智能标签功能
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" @click="handleCancel">
+          取消
+        </Button>
+        <Button @click="handleConfirm">
+          <Save class="mr-2 h-4 w-4" />
+          保存设置
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { NModal, NForm, NFormItem, NSelect, NSwitch, NInput, NButton, NSpace } from 'naive-ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Settings, Save } from 'lucide-vue-next';
 import type { UserSettings } from '../utils/types';
 
 interface Props {

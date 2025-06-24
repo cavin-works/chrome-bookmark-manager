@@ -1,104 +1,96 @@
 <template>
-  <n-config-provider :theme="currentTheme" :locale="zhCN" :date-locale="dateZhCN">
-    <n-message-provider>
-      <n-dialog-provider>
-        <n-notification-provider>
-          <n-loading-bar-provider>
-            <!-- Stagewise Toolbar - 仅在开发模式下显示 -->
-            <StagewiseToolbar v-if="isDev" :config="stageWiseConfig" />
-            <div class="newtab-container">
-              <!-- 头部 -->
-              <Header
-                :current-theme="theme"
-                @toggle-theme="toggleTheme"
-                @show-settings="showSettings = true"
-              />
+  <div :class="cn('min-h-screen bg-background text-foreground', isDarkMode && 'dark')">
+    <!-- Stagewise Toolbar - 仅在开发模式下显示 -->
+    <StagewiseToolbar v-if="isDev" :config="stageWiseConfig" />
 
-              <!-- 主内容 -->
-              <n-layout has-sider class="main-layout">
-                <!-- 侧边栏 -->
-                <Sidebar
-                  :bookmarks="bookmarks"
-                  :bookmark-folders="bookmarkFolders"
-                  :selected-folder="selectedFolder"
-                  :collapsed="sidebarCollapsed"
-                  @select-folder="selectFolder"
-                  @add-folder="showAddFolder = true"
-                  @collapse="sidebarCollapsed = $event"
-                  @reorder="handleFolderReorder"
+    <!-- Toast Provider -->
+    <ToastProvider>
+      <div class="flex h-screen flex-col">
+        <!-- 头部 -->
+        <Header
+          :current-theme="theme"
+          @toggle-theme="toggleTheme"
+          @show-settings="showSettings = true"
+        />
+
+        <!-- 主内容 -->
+        <div class="flex flex-1 overflow-hidden">
+          <!-- 侧边栏 -->
+          <Sidebar
+            :bookmarks="bookmarks"
+            :bookmark-folders="bookmarkFolders"
+            :selected-folder="selectedFolder"
+            :collapsed="sidebarCollapsed"
+            @select-folder="selectFolder"
+            @add-folder="showAddFolder = true"
+            @collapse="sidebarCollapsed = $event"
+            @reorder="handleFolderReorder"
+          />
+
+          <!-- 内容区域 -->
+          <main class="flex-1 overflow-hidden">
+            <ScrollArea class="h-full">
+              <div class="flex flex-col">
+                <!-- 搜索栏 -->
+                <SearchBar
+                  v-model:search-query="searchQuery"
+                  v-model:layout="layout"
+                  @search-input="onSearchInput"
                 />
 
-                <!-- 内容区域 -->
-                <n-layout-content class="content">
-                  <n-scrollbar class="content-scrollbar">
-                    <div class="content-wrapper">
-                      <!-- 搜索栏 -->
-                      <SearchBar
-                        v-model:search-query="searchQuery"
-                        v-model:layout="layout"
-                        @search-input="onSearchInput"
-                      />
+                <!-- 书签内容 -->
+                <div class="flex-1">
+                  <BookmarkGrid
+                    :filtered-bookmarks="filteredBookmarks"
+                    :search-query="searchQuery"
+                    :layout="layout"
+                    :loading="loading"
+                    @add-bookmark="showAddBookmark = true"
+                    @open-bookmark="openBookmark"
+                    @edit-bookmark="editBookmark"
+                    @delete-bookmark="deleteBookmark"
+                  />
+                </div>
+              </div>
+            </ScrollArea>
+          </main>
+        </div>
 
-                      <!-- 书签内容 -->
-                      <BookmarkGrid
-                        :filtered-bookmarks="filteredBookmarks"
-                        :search-query="searchQuery"
-                        :layout="layout"
-                        :loading="loading"
-                        @add-bookmark="showAddBookmark = true"
-                        @open-bookmark="openBookmark"
-                        @edit-bookmark="editBookmark"
-                        @delete-bookmark="deleteBookmark"
-                      />
-                    </div>
-                  </n-scrollbar>
-                </n-layout-content>
-              </n-layout>
+        <!-- 对话框组件 -->
+        <AddBookmarkDialog
+          v-model:show="showAddBookmark"
+          :category-options="categoryOptions"
+          :folder-options="folderOptions"
+          @confirm="addBookmark"
+        />
 
-              <!-- 对话框组件 -->
-              <AddBookmarkDialog
-                v-model:show="showAddBookmark"
-                :category-options="categoryOptions"
-                :folder-options="folderOptions"
-                @confirm="addBookmark"
-              />
+        <AddFolderDialog
+          v-model:show="showAddFolder"
+          :folder-options="folderOptions"
+          @confirm="addFolder"
+        />
 
-              <AddFolderDialog
-                v-model:show="showAddFolder"
-                :folder-options="folderOptions"
-                @confirm="addFolder"
-              />
+        <SettingsDialog
+          v-model:show="showSettings"
+          :settings="settings"
+          @confirm="saveSettings"
+        />
+      </div>
 
-              <SettingsDialog
-                v-model:show="showSettings"
-                :settings="settings"
-                @confirm="saveSettings"
-              />
-            </div>
-          </n-loading-bar-provider>
-        </n-notification-provider>
-      </n-dialog-provider>
-    </n-message-provider>
-  </n-config-provider>
+      <Toaster />
+    </ToastProvider>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, h } from 'vue';
-import { zhCN, dateZhCN } from 'naive-ui';
+import { ref, computed, onMounted, watch } from 'vue';
 import { StagewiseToolbar } from '@stagewise/toolbar-vue';
 import { VuePlugin } from '@stagewise-plugins/vue';
-import {
-  NConfigProvider,
-  NMessageProvider,
-  NDialogProvider,
-  NNotificationProvider,
-  NLoadingBarProvider,
-  NLayout,
-  NLayoutContent,
-  NScrollbar,
-  darkTheme,
-  lightTheme
-} from 'naive-ui';
+import { ToastProvider } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast/use-toast';
 
 import { Bookmark, UserSettings } from '../utils/types';
 import { bookmarkService } from '../services/bookmarkService';
@@ -106,7 +98,6 @@ import { iconService } from '../services/iconService';
 import { aiService } from '../services/aiService';
 import { storageService } from '../services/storageService';
 import { debounce, getSystemTheme } from '../utils/helpers';
-import { message, dialog } from '../utils/naive-ui';
 
 // 组件导入
 import Header from '../components/Header.vue';
@@ -137,6 +128,9 @@ const settings = ref<UserSettings>({
   autoCategorize: true,
 });
 
+// Toast
+const { toast } = useToast();
+
 // Stagewise 配置
 const isDev = ref(import.meta.env.DEV);
 const stageWiseConfig = ref({
@@ -144,11 +138,11 @@ const stageWiseConfig = ref({
 });
 
 // 计算属性
-const currentTheme = computed(() => {
+const isDarkMode = computed(() => {
   if (theme.value === 'auto') {
-    return getSystemTheme() === 'dark' ? darkTheme : lightTheme;
+    return getSystemTheme() === 'dark';
   }
-  return theme.value === 'dark' ? darkTheme : lightTheme;
+  return theme.value === 'dark';
 });
 
 // 获取AI分类（用于下拉选择）
@@ -178,8 +172,6 @@ const folderOptions = computed(() => [
     .filter(folder => folder.title && folder.title.trim() !== '')
     .map(folder => ({ label: folder.title, value: folder.id }))
 ]);
-
-
 
 const filteredBookmarks = computed(() => {
   let filtered = bookmarks.value;
@@ -226,7 +218,7 @@ const onSearchInput = debounce(() => {
 const toggleTheme = () => {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
   settings.value.theme = theme.value;
-  saveSettings();
+  saveSettings(settings.value);
 };
 
 const openBookmark = (bookmark: Bookmark) => {
@@ -237,26 +229,31 @@ const openBookmark = (bookmark: Bookmark) => {
 
 const editBookmark = (bookmark: Bookmark) => {
   // TODO: 实现编辑功能
-  message.info('编辑功能开发中...');
+  toast({
+    title: "提示",
+    description: "编辑功能开发中...",
+  });
 };
 
 const deleteBookmark = async (bookmark: Bookmark) => {
-  dialog.warning({
-    title: '确认删除',
-    content: `确定要删除书签"${bookmark.title}"吗？`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      try {
-        await bookmarkService.deleteBookmark(bookmark.id);
-        await loadBookmarks();
-        message.success('删除成功');
-      } catch (error) {
-        console.error('删除书签失败:', error);
-        message.error('删除失败');
-      }
+  // 使用简单确认对话框替代 n-dialog
+  if (confirm(`确定要删除书签"${bookmark.title}"吗？`)) {
+    try {
+      await bookmarkService.deleteBookmark(bookmark.id);
+      await loadBookmarks();
+      toast({
+        title: "删除成功",
+        description: "书签已删除",
+      });
+    } catch (error) {
+      console.error('删除书签失败:', error);
+      toast({
+        title: "删除失败",
+        description: "删除书签失败，请重试",
+        variant: "destructive",
+      });
     }
-  });
+  }
 };
 
 const addBookmark = async (formData: any) => {
@@ -288,10 +285,17 @@ const addBookmark = async (formData: any) => {
     }
 
     await loadBookmarks();
-    message.success('添加成功');
+    toast({
+      title: "添加成功",
+      description: "书签已添加",
+    });
   } catch (error) {
     console.error('添加书签失败:', error);
-    message.error('添加失败');
+    toast({
+      title: "添加失败",
+      description: "添加书签失败，请重试",
+      variant: "destructive",
+    });
   }
 };
 
@@ -303,10 +307,17 @@ const addFolder = async (formData: any) => {
     );
 
     await loadBookmarks();
-    message.success('创建成功');
+    toast({
+      title: "创建成功",
+      description: "文件夹已创建",
+    });
   } catch (error) {
     console.error('创建文件夹失败:', error);
-    message.error('创建失败');
+    toast({
+      title: "创建失败",
+      description: "创建文件夹失败，请重试",
+      variant: "destructive",
+    });
   }
 };
 
@@ -444,10 +455,17 @@ const handleFolderReorder = async () => {
   try {
     // 重新加载书签和文件夹数据
     await loadBookmarks();
-    message.success('文件夹排序已更新');
+    toast({
+      title: "排序成功",
+      description: "文件夹排序已更新",
+    });
   } catch (error) {
     console.error('重新加载数据失败:', error);
-    message.error('更新数据失败');
+    toast({
+      title: "更新失败",
+      description: "更新数据失败，请重试",
+      variant: "destructive",
+    });
   }
 };
 
@@ -489,10 +507,17 @@ const saveSettings = async (newSettings: UserSettings) => {
       aiService.setApiKey(settings.value.aiApiKey);
     }
 
-    message.success('设置保存成功');
+    toast({
+      title: "设置保存成功",
+      description: "您的设置已保存",
+    });
   } catch (error) {
     console.error('保存设置失败:', error);
-    message.error('保存设置失败');
+    toast({
+      title: "保存失败",
+      description: "保存设置失败，请重试",
+      variant: "destructive",
+    });
   }
 };
 
@@ -520,4 +545,3 @@ onMounted(async () => {
   console.log('NewTab组件初始化完成');
 });
 </script>
-

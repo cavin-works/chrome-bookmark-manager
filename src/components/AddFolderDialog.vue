@@ -1,36 +1,80 @@
 <template>
-  <n-modal :show="show" preset="dialog" title="创建文件夹" @update:show="$emit('update:show', $event)">
-    <n-form ref="formRef" :model="formData" label-placement="top">
-      <n-form-item label="文件夹名称" path="title" required>
-        <n-input v-model:value="formData.title" placeholder="文件夹名称" />
-      </n-form-item>
-      <n-form-item label="父文件夹" path="parentId">
-        <n-select
-          v-model:value="formData.parentId"
-          :options="folderOptions"
-          placeholder="根目录"
-          clearable
-        />
-      </n-form-item>
-    </n-form>
-    <template #action>
-      <n-space>
-        <n-button @click="handleCancel">取消</n-button>
-        <n-button
-          type="primary"
-          @click="handleConfirm"
-          :disabled="!formData.title"
-        >
-          创建
-        </n-button>
-      </n-space>
-    </template>
-  </n-modal>
+  <Dialog :open="show" @update:open="$emit('update:show', $event)">
+    <DialogContent class="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle class="flex items-center gap-2">
+          <FolderPlus class="h-5 w-5" />
+          创建文件夹
+        </DialogTitle>
+        <DialogDescription>
+          创建一个新的文件夹来组织您的书签。
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="grid gap-4 py-4">
+        <div class="grid gap-2">
+          <label for="title" class="text-sm font-medium">
+            文件夹名称 <span class="text-destructive">*</span>
+          </label>
+          <Input
+            id="title"
+            v-model="formData.title"
+            placeholder="文件夹名称"
+          />
+        </div>
+
+        <div class="grid gap-2">
+          <label for="parent" class="text-sm font-medium">父文件夹</label>
+          <Select v-model="formData.parentId">
+            <SelectTrigger>
+              <SelectValue placeholder="根目录" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="option in folderOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" @click="handleCancel">
+          取消
+        </Button>
+        <Button @click="handleConfirm" :disabled="!formData.title">
+          <FolderPlus class="mr-2 h-4 w-4" />
+          创建文件夹
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { NModal, NForm, NFormItem, NInput, NSelect, NButton, NSpace } from 'naive-ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { FolderPlus } from 'lucide-vue-next';
 
 interface FolderForm {
   title: string;
@@ -49,7 +93,6 @@ const emit = defineEmits<{
   'confirm': [data: FolderForm];
 }>();
 
-const formRef = ref();
 const formData = ref<FolderForm>({
   title: '',
   parentId: '',

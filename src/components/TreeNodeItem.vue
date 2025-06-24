@@ -1,20 +1,19 @@
 <template>
-  <div class="tree-node-item">
+  <div class="w-full">
     <div
-      class="tree-item folder-item"
-      :class="{ selected: selectedFolder === folder.id }"
-      :style="{ paddingLeft: (level * 16) + 'px' }"
+      :class="cn(
+        'flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors',
+        'hover:bg-accent hover:text-accent-foreground',
+        selectedFolder === folder.id && 'bg-accent text-accent-foreground font-medium'
+      )"
+      :style="{ paddingLeft: (level * 16 + 8) + 'px' }"
       @click="$emit('select', folder.id)"
     >
-      <div class="tree-item-content">
-        <n-icon class="tree-icon">
-          <FolderOutline />
-        </n-icon>
-        <span class="tree-label">{{ folder.title }}</span>
-        <n-text depth="3" class="tree-count" v-if="folder.count > 0">
-          ({{ folder.count }})
-        </n-text>
-      </div>
+      <Folder class="h-4 w-4 text-muted-foreground" />
+      <span class="flex-1 truncate text-sm">{{ folder.title }}</span>
+      <Badge v-if="folder.count > 0" variant="secondary" class="h-5 text-xs">
+        {{ folder.count }}
+      </Badge>
     </div>
 
     <!-- 子文件夹 -->
@@ -23,10 +22,9 @@
       v-model="folder.children"
       group="bookmark-folders"
       :animation="200"
-      ghost-class="sortable-ghost"
-      chosen-class="sortable-chosen"
-      drag-class="sortable-drag"
-      class="children-container"
+      ghost-class="opacity-50"
+      chosen-class="bg-accent/50"
+      drag-class="rotate-2 scale-105"
       tag="div"
     >
       <TreeNodeItem
@@ -42,8 +40,9 @@
 </template>
 
 <script setup lang="ts">
-import { NIcon, NText } from 'naive-ui';
-import { FolderOutline } from '@vicons/ionicons5';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { Folder } from 'lucide-vue-next';
 import { VueDraggable } from 'vue-draggable-plus';
 
 interface TreeNodeData {

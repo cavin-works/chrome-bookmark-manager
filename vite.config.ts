@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import webExtension, { readJsonFile } from "vite-plugin-web-extension";
+import path from "path";
 
 function generateManifest() {
   const manifest = readJsonFile("src/manifest.json");
@@ -22,4 +23,9 @@ export default defineConfig({
       watchFilePaths: ["package.json", "manifest.json"],
     }),
   ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 });

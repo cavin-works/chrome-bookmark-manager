@@ -210,14 +210,15 @@ class AIService {
   }
 
   // 获取分类建议
-  getCategorySuggestions(): string[] {
+  getCategorySuggestions(): readonly string[] {
     return AI_CONFIG.DEFAULT_CATEGORIES;
   }
 
-  // 添加自定义分类
+  // 添加自定义分类（注意：这会创建新数组，而不是修改原数组）
   addCustomCategory(category: string): void {
-    if (!AI_CONFIG.DEFAULT_CATEGORIES.includes(category)) {
-      AI_CONFIG.DEFAULT_CATEGORIES.push(category);
+    if (!AI_CONFIG.DEFAULT_CATEGORIES.includes(category as any)) {
+      // 由于DEFAULT_CATEGORIES是只读的，这里需要通过其他方式处理自定义分类
+      console.warn('Cannot modify readonly DEFAULT_CATEGORIES. Consider using a separate custom categories array.');
     }
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="tree-node-wrapper"
+    class="relative"
     @dragover.prevent="handleDragOver"
     @dragleave="handleDragLeave"
     @drop.prevent="handleDrop"
@@ -8,43 +8,43 @@
     <!-- 拖拽位置指示器 - before -->
     <div
       v-if="showLineBefore"
-      class="drop-line drop-line-before"
+      class="absolute -top-px left-0 right-0 h-0.5 bg-primary z-10"
     ></div>
 
     <!-- 树节点内容 -->
     <div
-      class="tree-item"
-      :class="{
-        selected: selectedFolder === node.key,
-        'drag-over-inside': showBlock,
-        'dragging': isDragging,
-        'child-being-dragged': isChildBeingDragged,
-        'dragging-with-children': hasDraggedChildren
-      }"
+      :class="cn(
+        'flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors',
+        'hover:bg-accent hover:text-accent-foreground',
+        selectedFolder === node.key && 'bg-accent text-accent-foreground font-medium',
+        showBlock && 'bg-accent/50 ring-1 ring-primary',
+        isDragging && 'opacity-50',
+        isChildBeingDragged && 'opacity-30',
+        hasDraggedChildren && 'ring-1 ring-destructive'
+      )"
       @click="handleSelect"
     >
-      <div class="tree-item-content">
-        <n-icon class="tree-icon">
-          <component :is="iconComponent" />
-        </n-icon>
-        <span class="tree-label">{{ node.label }}</span>
-        <n-text depth="3" class="tree-count">({{ node.count }})</n-text>
-      </div>
+      <component
+        :is="iconComponent"
+        class="h-4 w-4 text-muted-foreground"
+      />
+      <span class="flex-1 truncate text-sm">{{ node.label }}</span>
+      <Badge variant="secondary" class="h-5 text-xs">{{ node.count }}</Badge>
     </div>
 
     <!-- 拖拽位置指示器 - after -->
     <div
       v-if="showLineAfter"
-      class="drop-line drop-line-after"
+      class="absolute -bottom-px left-0 right-0 h-0.5 bg-primary z-10"
     ></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { NIcon, NText } from '../utils/naive-ui';
-import { FolderOutline, FolderOpenOutline } from '@vicons/ionicons5';
-import { FolderPlus } from '@vicons/tabler';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { Folder, FolderOpen } from 'lucide-vue-next';
 
 interface TreeNodeData {
   key: string;
@@ -109,7 +109,7 @@ const isExpanded = computed(() => false);
 
 // 图标组件
 const iconComponent = computed(() => {
-  return isExpanded.value ? FolderOpenOutline : FolderOutline;
+  return isExpanded.value ? FolderOpen : Folder;
 });
 
 // 显示高亮线 - before

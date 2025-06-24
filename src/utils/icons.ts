@@ -18,7 +18,7 @@ import {
   TrashOutline,
   HomeOutline,
   LinkOutline,
-  TagOutline,
+  PricetagOutline,
   ChevronDownOutline,
   ChevronUpOutline,
   ChevronForwardOutline,
@@ -36,13 +36,10 @@ import {
 import {
   World,
   Star,
-  StarFilled,
   Heart,
-  HeartFilled,
   Download,
   Upload,
   Filter,
-  Sort,
   Menu,
   Dots,
   DotsVertical,
@@ -64,7 +61,7 @@ export const icons = {
   delete: TrashOutline,
   home: HomeOutline,
   link: LinkOutline,
-  tag: TagOutline,
+  tag: PricetagOutline,
 
   // 主题图标
   sun: SunnyOutline,
@@ -94,43 +91,42 @@ export const icons = {
   // 其他图标
   world: World,
   star: Star,
-  starFilled: StarFilled,
+  starFilled: Star, // 使用普通 Star 图标替代
   heart: Heart,
-  heartFilled: HeartFilled,
+  heartFilled: Heart, // 使用普通 Heart 图标替代
   download: Download,
   upload: Upload,
   filter: Filter,
-  sort: Sort,
+  sort: Menu, // 使用 Menu 图标替代
   menu: Menu,
   dots: Dots,
   dotsVertical: DotsVertical,
   externalLink: ExternalLink
 } as Record<string, Component>;
 
-// 图标渲染辅助函数
+// 图标渲染辅助函数（简化版，直接返回图标组件）
 export function renderIcon(icon: Component) {
-  return () => h(NIcon, null, { default: () => h(icon) });
+  return () => h(icon);
 }
 
-// 快捷图标组件
+// 快捷图标组件（简化版，不使用 NIcon 包装）
 export const IconComponents = {
-  Search: () => h(NIcon, null, { default: () => h(SearchOutline) }),
-  Bookmark: () => h(NIcon, null, { default: () => h(BookmarkOutline) }),
-  Bookmarks: () => h(NIcon, null, { default: () => h(BookmarksOutline) }),
-  Folder: () => h(NIcon, null, { default: () => h(FolderOutline) }),
-  FolderOpen: () => h(NIcon, null, { default: () => h(FolderOpenOutline) }),
-  Add: () => h(NIcon, null, { default: () => h(AddOutline) }),
-  Settings: () => h(NIcon, null, { default: () => h(SettingsOutline) }),
-  Sun: () => h(NIcon, null, { default: () => h(SunnyOutline) }),
-  Moon: () => h(NIcon, null, { default: () => h(MoonOutline) }),
-  Grid: () => h(NIcon, null, { default: () => h(GridOutline) }),
-  List: () => h(NIcon, null, { default: () => h(ListOutline) }),
-  Close: () => h(NIcon, null, { default: () => h(CloseOutline) }),
-  Edit: () => h(NIcon, null, { default: () => h(CreateOutline) }),
-  Delete: () => h(NIcon, null, { default: () => h(TrashOutline) }),
-  Refresh: () => h(NIcon, null, { default: () => h(RefreshOutline) })
+  Search: () => h(SearchOutline),
+  Bookmark: () => h(BookmarkOutline),
+  Bookmarks: () => h(BookmarksOutline),
+  Folder: () => h(FolderOutline),
+  FolderOpen: () => h(FolderOpenOutline),
+  Add: () => h(AddOutline),
+  Settings: () => h(SettingsOutline),
+  Sun: () => h(SunnyOutline),
+  Moon: () => h(MoonOutline),
+  Grid: () => h(GridOutline),
+  List: () => h(ListOutline),
+  Close: () => h(CloseOutline),
+  Edit: () => h(CreateOutline),
+  Delete: () => h(TrashOutline),
+  Refresh: () => h(RefreshOutline)
 };
 
-// 需要导入 h 和 NIcon
+// 导入 Vue 的 h 函数
 import { h } from 'vue';
-import { NIcon } from 'naive-ui';

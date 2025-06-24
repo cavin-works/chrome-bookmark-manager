@@ -1,0 +1,413 @@
+/* 响应式设计优化系统 */
+
+@layer components {
+  /* 自适应容器 */
+  .adaptive-container {
+    @apply w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .adaptive-container-sm {
+    @apply w-full max-w-3xl mx-auto px-4 sm:px-6;
+  }
+
+  .adaptive-container-xs {
+    @apply w-full max-w-lg mx-auto px-4;
+  }
+
+  /* 响应式网格系统 */
+  .responsive-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .responsive-grid-sm {
+    @apply grid gap-3;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .responsive-grid-lg {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+
+  /* 响应式卡片 */
+  .responsive-card {
+    @apply p-4 sm:p-6 rounded-lg border bg-card text-card-foreground;
+    min-height: 120px;
+  }
+
+  .responsive-card-compact {
+    @apply p-3 sm:p-4 rounded-md border bg-card text-card-foreground;
+    min-height: 80px;
+  }
+
+  /* 响应式按钮组 */
+  .responsive-button-group {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+  }
+
+  .responsive-button-group-inline {
+    @apply flex flex-wrap gap-1 sm:gap-2;
+  }
+
+  /* 响应式导航 */
+  .responsive-nav {
+    @apply flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6;
+  }
+
+  .responsive-nav-compact {
+    @apply flex overflow-x-auto gap-2 pb-2 lg:pb-0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .responsive-nav-compact::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 响应式侧边栏 */
+  .responsive-sidebar {
+    @apply fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:relative lg:transform-none lg:z-auto;
+  }
+
+  .responsive-sidebar.open {
+    @apply translate-x-0;
+  }
+
+  .responsive-sidebar.closed {
+    @apply -translate-x-full lg:translate-x-0;
+  }
+
+  .responsive-sidebar-overlay {
+    @apply fixed inset-0 bg-black/50 z-40 lg:hidden;
+  }
+
+  /* 响应式表格 */
+  .responsive-table {
+    @apply w-full overflow-x-auto;
+  }
+
+  .responsive-table table {
+    @apply min-w-full border-collapse;
+  }
+
+  .responsive-table-card {
+    @apply block sm:hidden space-y-3;
+  }
+
+  .responsive-table-desktop {
+    @apply hidden sm:table;
+  }
+
+  /* 响应式文本 */
+  .responsive-text {
+    @apply text-sm sm:text-base;
+  }
+
+  .responsive-text-lg {
+    @apply text-base sm:text-lg lg:text-xl;
+  }
+
+  .responsive-text-xl {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+
+  .responsive-text-2xl {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+
+  /* 响应式间距 */
+  .responsive-spacing {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+
+  .responsive-spacing-sm {
+    @apply space-y-2 sm:space-y-3 lg:space-y-4;
+  }
+
+  .responsive-padding {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .responsive-padding-sm {
+    @apply p-2 sm:p-3 lg:p-4;
+  }
+
+  .responsive-margin {
+    @apply m-4 sm:m-6 lg:m-8;
+  }
+
+  .responsive-margin-sm {
+    @apply m-2 sm:m-3 lg:m-4;
+  }
+
+  /* 响应式高度 */
+  .responsive-height {
+    @apply h-48 sm:h-64 lg:h-80;
+  }
+
+  .responsive-height-sm {
+    @apply h-32 sm:h-40 lg:h-48;
+  }
+
+  .responsive-height-full {
+    @apply h-screen lg:h-auto lg:min-h-screen;
+  }
+
+  /* 响应式图像 */
+  .responsive-image {
+    @apply w-full h-auto object-cover rounded-lg;
+  }
+
+  .responsive-avatar {
+    @apply w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full;
+  }
+
+  .responsive-icon {
+    @apply w-4 h-4 sm:w-5 sm:h-5;
+  }
+
+  .responsive-icon-lg {
+    @apply w-6 h-6 sm:w-8 sm:h-8;
+  }
+
+  /* 响应式搜索栏 */
+  .responsive-search {
+    @apply w-full max-w-xs sm:max-w-sm lg:max-w-md xl:max-w-lg;
+  }
+
+  .responsive-search-full {
+    @apply w-full sm:max-w-md lg:max-w-lg xl:max-w-xl;
+  }
+
+  /* 响应式对话框 */
+  .responsive-dialog {
+    @apply w-full max-w-sm sm:max-w-md lg:max-w-lg;
+  }
+
+  .responsive-dialog-lg {
+    @apply w-full max-w-md sm:max-w-lg lg:max-w-2xl;
+  }
+
+  .responsive-dialog-full {
+    @apply w-full h-full sm:w-auto sm:h-auto sm:max-w-3xl sm:max-h-[90vh];
+  }
+
+  /* 移动端优化 */
+  @media (max-width: 768px) {
+    .mobile-hidden {
+      @apply hidden;
+    }
+
+    .mobile-full-width {
+      @apply w-full;
+    }
+
+    .mobile-stack {
+      @apply flex-col;
+    }
+
+    .mobile-scroll {
+      @apply overflow-x-auto;
+    }
+
+    .mobile-fixed-bottom {
+      @apply fixed bottom-0 left-0 right-0 z-50;
+    }
+
+    .mobile-safe-area {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* 移动端触摸优化 */
+    .mobile-touch {
+      @apply min-h-[44px] min-w-[44px];
+    }
+
+    .mobile-touch-lg {
+      @apply min-h-[48px] min-w-[48px];
+    }
+  }
+
+  /* 平板端优化 */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .tablet-grid {
+      @apply grid-cols-2 lg:grid-cols-3;
+    }
+
+    .tablet-hidden {
+      @apply hidden;
+    }
+
+    .tablet-compact {
+      @apply px-4 py-2;
+    }
+  }
+
+  /* 桌面端优化 */
+  @media (min-width: 1024px) {
+    .desktop-grid {
+      @apply grid-cols-4 xl:grid-cols-6;
+    }
+
+    .desktop-sidebar {
+      @apply w-80;
+    }
+
+    .desktop-content {
+      @apply ml-80;
+    }
+
+    .desktop-hover {
+      @apply hover:scale-105 hover:shadow-lg;
+    }
+  }
+
+  /* 超宽屏优化 */
+  @media (min-width: 1536px) {
+    .ultrawide-grid {
+      @apply grid-cols-6 2xl:grid-cols-8;
+    }
+
+    .ultrawide-container {
+      @apply max-w-[1800px];
+    }
+  }
+
+  /* 垂直空间优化 */
+  @media (max-height: 600px) {
+    .compact-vertical {
+      @apply py-2 space-y-2;
+    }
+
+    .compact-header {
+      @apply h-12;
+    }
+
+    .compact-content {
+      @apply max-h-96 overflow-y-auto;
+    }
+  }
+
+  /* 打印优化 */
+  @media print {
+    .print-hidden {
+      @apply hidden;
+    }
+
+    .print-visible {
+      @apply block;
+    }
+
+    .print-break {
+      page-break-after: always;
+    }
+
+    .print-no-break {
+      page-break-inside: avoid;
+    }
+  }
+
+  /* 高 DPI 屏幕优化 */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+    .retina-border {
+      border-width: 0.5px;
+    }
+
+    .retina-text {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  }
+
+  /* 黑暗模式响应式调整 */
+  @media (prefers-color-scheme: dark) {
+    .auto-dark-adjust {
+      @apply brightness-90 contrast-110;
+    }
+  }
+
+  /* 减少动画模式响应式 */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-safe {
+      @apply transition-none;
+    }
+  }
+
+  /* 高对比度模式响应式 */
+  @media (prefers-contrast: high) {
+    .contrast-adjust {
+      @apply border-2 border-black dark:border-white;
+    }
+  }
+}
+
+@layer utilities {
+  /* 断点显示/隐藏工具类 */
+  .show-xs {
+    @apply block sm:hidden;
+  }
+
+  .show-sm {
+    @apply hidden sm:block md:hidden;
+  }
+
+  .show-md {
+    @apply hidden md:block lg:hidden;
+  }
+
+  .show-lg {
+    @apply hidden lg:block xl:hidden;
+  }
+
+  .show-xl {
+    @apply hidden xl:block;
+  }
+
+  .hide-xs {
+    @apply hidden sm:block;
+  }
+
+  .hide-sm {
+    @apply block sm:hidden md:block;
+  }
+
+  .hide-md {
+    @apply block md:hidden lg:block;
+  }
+
+  .hide-lg {
+    @apply block lg:hidden xl:block;
+  }
+
+  .hide-xl {
+    @apply block xl:hidden;
+  }
+
+  /* 响应式 Flexbox 工具 */
+  .flex-responsive {
+    @apply flex flex-col sm:flex-row;
+  }
+
+  .flex-responsive-reverse {
+    @apply flex flex-col-reverse sm:flex-row;
+  }
+
+  /* 响应式间距工具 */
+  .gap-responsive {
+    @apply gap-2 sm:gap-4 lg:gap-6;
+  }
+
+  .gap-responsive-sm {
+    @apply gap-1 sm:gap-2 lg:gap-3;
+  }
+
+  /* 响应式文本对齐 */
+  .text-responsive-center {
+    @apply text-center sm:text-left;
+  }
+
+  .text-responsive-right {
+    @apply text-center sm:text-right;
+  }
+}

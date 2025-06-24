@@ -3,40 +3,37 @@
     v-model="folderList"
     group="bookmark-folders"
     :animation="200"
-    ghost-class="sortable-ghost"
-    chosen-class="sortable-chosen"
-    drag-class="sortable-drag"
+    ghost-class="opacity-50"
+    chosen-class="bg-accent/50"
+    drag-class="rotate-1 scale-105"
     @end="onDragEnd"
-    class="nested-container"
     tag="div"
+    class="space-y-0.5"
   >
     <div
       v-for="folder in folderList"
       :key="folder.id"
-      class="nested-folder-item"
+      class="w-full"
       :data-folder-id="folder.id"
     >
       <!-- 文件夹节点 -->
       <div
-        class="tree-item folder-item"
-        :class="{
-          selected: selectedFolder === folder.id
-        }"
-        :style="{ paddingLeft: `${folder.level * 16}px` }"
+        :class="cn(
+          'flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer transition-colors',
+          'hover:bg-accent hover:text-accent-foreground',
+          selectedFolder === folder.id && 'bg-accent text-accent-foreground font-medium'
+        )"
+        :style="{ paddingLeft: `${folder.level * 16 + 8}px` }"
         @click="handleSelect(folder.id)"
       >
-        <div class="tree-item-content">
-          <n-icon class="tree-icon">
-            <FolderOutline />
-          </n-icon>
-          <span class="tree-label">{{ folder.title }}</span>
-          <n-text depth="3" class="tree-count" v-if="folder.count > 0">
-            ({{ folder.count }})
-          </n-text>
-        </div>
+        <Folder class="h-4 w-4 text-muted-foreground" />
+        <span class="flex-1 truncate text-sm">{{ folder.title }}</span>
+        <Badge v-if="folder.count > 0" variant="secondary" class="h-5 text-xs">
+          {{ folder.count }}
+        </Badge>
       </div>
 
-      <!-- 递归渲染子文件夹 - 关键修复：正确的递归结构 -->
+      <!-- 递归渲染子文件夹 -->
       <NestedFolderList
         v-if="folder.children && folder.children.length > 0"
         v-model="folder.children"
@@ -51,10 +48,9 @@
 <script setup lang="ts">
 import { computed, defineOptions } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import { NIcon, NText } from '../utils/naive-ui';
-import { FolderOutline } from '@vicons/ionicons5';
-import { message } from '../utils/naive-ui';
-import { bookmarkService } from '../services/bookmarkService';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { Folder } from 'lucide-vue-next';
 
 // 设置组件名称，用于递归 - 关键：必须与组件名一致
 defineOptions({

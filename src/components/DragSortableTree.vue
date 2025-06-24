@@ -1,27 +1,29 @@
 <template>
-  <div class="drag-sortable-tree">
+  <div class="w-full space-y-2">
     <!-- 使用提示 -->
-    <div v-if="!hideAllBookmarks && nestedTreeData.length > 0" class="usage-tip">
-      <n-text depth="3" class="text-xs">
-        💡 提示：拖拽文件夹进行排序，Chrome会自动移动其所有子内容。智能防护确保不会移动到错误位置。
-      </n-text>
+    <div v-if="!hideAllBookmarks && nestedTreeData.length > 0" class="px-2">
+      <div class="rounded-md bg-muted/50 p-2">
+        <p class="text-xs text-muted-foreground">
+          💡 提示：拖拽文件夹进行排序，Chrome会自动移动其所有子内容。智能防护确保不会移动到错误位置。
+        </p>
+      </div>
     </div>
 
-    <div class="tree-container">
+    <div class="space-y-1">
       <!-- 全部书签 -->
-      <div
-        v-if="!hideAllBookmarks"
-        class="tree-item all-bookmarks"
-        :class="{ selected: selectedFolder === '' }"
-        @click="handleSelect('')"
-      >
-        <div class="tree-item-content">
-          <n-icon class="tree-icon">
-            <BookmarksOutline />
-          </n-icon>
-          <span class="tree-label">全部书签</span>
-          <n-text depth="3" class="tree-count">({{ totalBookmarks }})</n-text>
-        </div>
+      <div v-if="!hideAllBookmarks" class="px-2">
+        <Button
+          variant="ghost"
+          :class="cn(
+            'h-auto w-full justify-start p-2',
+            selectedFolder === '' && 'bg-accent text-accent-foreground font-medium'
+          )"
+          @click="handleSelect('')"
+        >
+          <Bookmark class="mr-2 h-4 w-4" />
+          <span class="flex-1 text-left">全部书签</span>
+          <Badge variant="secondary" class="ml-auto">{{ totalBookmarks }}</Badge>
+        </Button>
       </div>
 
       <!-- 嵌套的可拖拽文件夹列表 -->
@@ -29,12 +31,12 @@
         v-model="nestedTreeData"
         group="bookmark-folders"
         :animation="200"
-        ghost-class="sortable-ghost"
-        chosen-class="sortable-chosen"
-        drag-class="sortable-drag"
+        ghost-class="opacity-50"
+        chosen-class="bg-accent/50"
+        drag-class="rotate-1 scale-105"
         @end="onDragEnd"
-        class="sortable-container"
         tag="div"
+        class="space-y-0.5"
       >
         <TreeNodeItem
           v-for="folder in nestedTreeData"
@@ -51,10 +53,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, defineOptions } from 'vue';
-import { NIcon, NText } from '../utils/naive-ui';
-import { BookmarksOutline } from '@vicons/ionicons5';
-import { message } from '../utils/naive-ui';
-import type { Bookmark, BookmarkFolder } from '../utils/types';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast/use-toast';
+import { Bookmark as BookmarkIcon } from 'lucide-vue-next';
+import type { Bookmark as BookmarkType, BookmarkFolder } from '../utils/types';
 import { VueDraggable } from 'vue-draggable-plus';
 import { bookmarkService } from '../services/bookmarkService';
 import TreeNodeItem from './TreeNodeItem.vue';
@@ -75,7 +79,7 @@ interface TreeNodeData {
 }
 
 interface Props {
-  bookmarks: Bookmark[];
+  bookmarks: BookmarkType[];
   bookmarkFolders: BookmarkFolder[];
   selectedFolder?: string;
   hideAllBookmarks?: boolean;
@@ -90,6 +94,8 @@ const emit = defineEmits<{
   select: [folderId: string];
   reorder: [];
 }>();
+
+const { toast } = useToast();
 
 // 计算总书签数
 const totalBookmarks = computed(() => props.bookmarks.length);
@@ -176,7 +182,11 @@ const onDragEnd = async (event: any) => {
     const draggedFolder = nestedTreeData.value[oldIndex];
     if (!draggedFolder) {
       console.error('找不到被拖拽的文件夹');
-      message.error('找不到被拖拽的文件夹');
+      toast({
+        title: "错误",
+        description: "找不到被拖拽的文件夹",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -197,7 +207,10 @@ const onDragEnd = async (event: any) => {
 
     // 统计移动的项目
     const totalItems = await countTotalItemsInFolder(draggedFolder.id);
-    message.success(`成功移动文件夹 "${draggedFolder.title}" 及其 ${totalItems.folders} 个子文件夹和 ${totalItems.bookmarks} 个书签！`);
+    toast({
+      title: "移动成功",
+      description: `成功移动文件夹 "${draggedFolder.title}" 及其 ${totalItems.folders} 个子文件夹和 ${totalItems.bookmarks} 个书签！`,
+    });
 
   } catch (error) {
     console.error('=== 嵌套拖拽同步失败 ===');
@@ -208,12 +221,24 @@ const onDragEnd = async (event: any) => {
 
     if (error instanceof Error) {
       if (error.message.includes('descendant')) {
-        message.error('不能将文件夹移动到自己的子文件夹中');
+        toast({
+          title: "移动失败",
+          description: "不能将文件夹移动到自己的子文件夹中",
+          variant: "destructive",
+        });
       } else {
-        message.error(`移动失败: ${error.message}`);
+        toast({
+          title: "移动失败",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     } else {
-      message.error('移动书签失败，请重试');
+      toast({
+        title: "移动失败",
+        description: "移动书签失败，请重试",
+        variant: "destructive",
+      });
     }
   }
 

@@ -1,25 +1,22 @@
 <template>
   <div class="bookmark-tree">
-    <n-tree
-      :data="treeData"
-      :selected-keys="selectedKeys"
-      :expanded-keys="expandedKeys"
-      key-field="key"
-      label-field="label"
-      children-field="children"
-      block-line
-      expand-on-click
-      selectable
-      draggable
-      :allow-drop="allowDrop"
-      :render-prefix="renderPrefix"
-      :render-suffix="renderSuffix"
-      :render-label="renderLabel"
-      @update:selected-keys="handleSelect"
-      @update:expanded-keys="handleExpand"
-      @drop="handleDrop"
-      class="modern-tree"
-    />
+    <div class="space-y-1">
+      <div
+        v-for="node in treeData"
+        :key="node.key"
+        class="tree-node"
+      >
+        <TreeNodeComponent
+          :node="node"
+          :level="0"
+          :selected-keys="selectedKeys"
+          :expanded-keys="expandedKeys"
+          @select="handleSelect"
+          @expand="handleExpand"
+          @drop="handleDrop"
+        />
+      </div>
+    </div>
   </div>
 </template>
 

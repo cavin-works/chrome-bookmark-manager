@@ -1,0 +1,270 @@
+/* 主题切换优化系统 */
+
+@layer base {
+  /* 全局主题过渡 */
+  html {
+    transition: color-scheme 0.3s ease;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  /* 根元素过渡 */
+  :root {
+    --theme-transition-duration: 0.3s;
+    --theme-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 通用元素主题过渡 */
+  * {
+    transition:
+      background-color var(--theme-transition-duration) var(--theme-transition-timing),
+      border-color var(--theme-transition-duration) var(--theme-transition-timing),
+      color var(--theme-transition-duration) var(--theme-transition-timing),
+      fill var(--theme-transition-duration) var(--theme-transition-timing),
+      stroke var(--theme-transition-duration) var(--theme-transition-timing),
+      opacity var(--theme-transition-duration) var(--theme-transition-timing),
+      box-shadow var(--theme-transition-duration) var(--theme-transition-timing),
+      transform var(--theme-transition-duration) var(--theme-transition-timing);
+  }
+
+  /* 排除某些元素的过渡 */
+  *:where(.no-theme-transition, .no-theme-transition *) {
+    transition: none !important;
+  }
+}
+
+@layer components {
+  /* 主题切换按钮动画 */
+  .theme-toggle {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+
+  .theme-toggle .icon-sun {
+    @apply transform transition-all duration-300;
+  }
+
+  .theme-toggle .icon-moon {
+    @apply transform transition-all duration-300;
+  }
+
+  /* 浅色主题状态 */
+  .theme-toggle:not(.dark) .icon-sun {
+    @apply rotate-0 scale-100 opacity-100;
+  }
+
+  .theme-toggle:not(.dark) .icon-moon {
+    @apply rotate-90 scale-0 opacity-0;
+  }
+
+  /* 深色主题状态 */
+  .theme-toggle.dark .icon-sun {
+    @apply -rotate-90 scale-0 opacity-0;
+  }
+
+  .theme-toggle.dark .icon-moon {
+    @apply rotate-0 scale-100 opacity-100;
+  }
+
+  /* 主题切换时的背景过渡效果 */
+  .theme-background {
+    @apply relative;
+  }
+
+  .theme-background::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 pointer-events-none;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                               rgba(255, 255, 255, 0.1) 0%,
+                               transparent 50%);
+    transition: opacity 0.3s ease;
+  }
+
+  .theme-background.switching::before {
+    @apply opacity-100;
+    animation: theme-ripple 0.6s ease-out;
+  }
+
+  @keyframes theme-ripple {
+    0% {
+      transform: scale(0);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+
+  /* 主题过渡期间的遮罩效果 */
+  .theme-transition-mask {
+    @apply fixed inset-0 pointer-events-none z-50;
+    background: conic-gradient(from 0deg at 50% 50%,
+                              transparent 0deg,
+                              rgba(0, 0, 0, 0.03) 90deg,
+                              transparent 180deg,
+                              rgba(0, 0, 0, 0.03) 270deg,
+                              transparent 360deg);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .theme-transition-mask.show {
+    opacity: 1;
+  }
+
+  /* 组件级别的主题过渡 */
+  .card-theme-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  .button-theme-transition {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .input-theme-transition {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  /* 文本颜色平滑过渡 */
+  .text-theme-transition {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  /* 边框颜色平滑过渡 */
+  .border-theme-transition {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  /* 背景颜色平滑过渡 */
+  .bg-theme-transition {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  /* 阴影过渡 */
+  .shadow-theme-transition {
+    transition: box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+  }
+
+  /* 图标主题过渡 */
+  .icon-theme-transition {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  /* 特殊主题过渡效果 */
+  .theme-fade {
+    animation: theme-fade-in 0.4s ease-out;
+  }
+
+  @keyframes theme-fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* 主题色彩波动效果 */
+  .theme-pulse {
+    animation: theme-pulse 2s infinite;
+  }
+
+  @keyframes theme-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  /* 系统主题检测过渡 */
+  .system-theme-transition {
+    @apply transition-all duration-500 ease-out;
+  }
+
+  /* 主题切换时的内容淡入淡出 */
+  .content-theme-transition {
+    @apply transition-opacity duration-200 ease-in-out;
+  }
+
+  .content-theme-transition.changing {
+    @apply opacity-70;
+  }
+
+  /* 主题切换按钮的视觉反馈 */
+  .theme-toggle-feedback {
+    @apply relative;
+  }
+
+  .theme-toggle-feedback::after {
+    content: '';
+    @apply absolute inset-0 rounded-full opacity-0 pointer-events-none;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+    transform: scale(0);
+    transition: all 0.3s ease;
+  }
+
+  .theme-toggle-feedback:active::after {
+    @apply opacity-100;
+    transform: scale(2);
+  }
+
+  /* 深色模式优化 */
+  .dark .theme-toggle-feedback::after {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+  }
+}
+
+@layer utilities {
+  /* 工具类 */
+  .preserve-theme-transition {
+    transition: inherit !important;
+  }
+
+  .instant-theme-change {
+    transition: none !important;
+  }
+
+  .slow-theme-transition {
+    --theme-transition-duration: 0.8s !important;
+  }
+
+  .fast-theme-transition {
+    --theme-transition-duration: 0.1s !important;
+  }
+}
+
+/* 媒体查询优化 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    --theme-transition-duration: 0s !important;
+  }
+
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon,
+  .theme-background::before,
+  .theme-transition-mask {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .theme-transition-mask {
+    display: none;
+  }
+
+  .theme-background::before {
+    display: none;
+  }
+}

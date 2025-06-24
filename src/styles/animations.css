@@ -1,0 +1,297 @@
+/* 统一动画效果系统 */
+
+@layer utilities {
+  /* 基础过渡效果 */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-100 ease-in-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* 主题切换动画 */
+  .theme-transition {
+    transition:
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 悬停效果 */
+  .hover-lift {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-0.5 shadow-lg;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+
+  .hover-scale:hover {
+    @apply scale-105;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .hover-glow:hover {
+    @apply shadow-md ring-2 ring-primary/20;
+  }
+
+  /* 拖拽动画 */
+  .drag-preview {
+    @apply opacity-60 rotate-3 scale-95;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .drag-over {
+    @apply ring-2 ring-primary/50 bg-primary/5;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .drag-ghost {
+    @apply opacity-50 blur-sm;
+  }
+
+  /* 拖拽指示器 */
+  .drop-indicator {
+    @apply bg-primary h-0.5 rounded-full;
+    animation: pulse-glow 1.5s infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      @apply opacity-100;
+    }
+    50% {
+      @apply opacity-60;
+    }
+  }
+
+  /* 加载动画 */
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  .loading-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .loading-bounce {
+    animation: bounce 1s infinite;
+  }
+
+  /* 进入/退出动画 */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .fade-out {
+    animation: fadeOut 0.3s ease-in-out;
+  }
+
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .zoom-in {
+    animation: zoomIn 0.2s ease-out;
+  }
+
+  .zoom-out {
+    animation: zoomOut 0.2s ease-in;
+  }
+
+  /* 自定义关键帧 */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes zoomIn {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes zoomOut {
+    from {
+      transform: scale(1);
+      opacity: 1;
+    }
+    to {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+  }
+
+  /* 特殊效果 */
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+  }
+
+  .glass-effect.dark {
+    @apply bg-black/10 border-white/10;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-border {
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))) border-box;
+    border: 2px solid transparent;
+  }
+
+  /* 交互反馈 */
+  .tap-feedback {
+    @apply active:scale-95 transition-transform duration-75;
+  }
+
+  .ripple-effect {
+    @apply relative overflow-hidden;
+  }
+
+  .ripple-effect::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+  }
+
+  .ripple-effect:active::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  /* 响应式动画 */
+  @media (prefers-reduced-motion: reduce) {
+    .transition-smooth,
+    .transition-fast,
+    .transition-slow,
+    .theme-transition,
+    .hover-lift,
+    .hover-scale,
+    .hover-glow,
+    .drag-preview,
+    .drag-over {
+      transition: none !important;
+    }
+
+    .fade-in,
+    .fade-out,
+    .slide-in-right,
+    .slide-in-left,
+    .slide-up,
+    .slide-down,
+    .zoom-in,
+    .zoom-out,
+    .spinner,
+    .loading-pulse,
+    .loading-bounce {
+      animation: none !important;
+    }
+  }
+
+  /* 移动端优化 */
+  @media (max-width: 768px) {
+    .hover-lift:hover {
+      transform: none;
+    }
+
+    .hover-scale:hover {
+      transform: none;
+    }
+  }
+}

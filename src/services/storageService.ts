@@ -4,7 +4,7 @@ import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../utils/constants';
 
 class StorageService {
   private isExtensionEnvironment(): boolean {
-    return typeof browser !== 'undefined' && browser.storage;
+    return typeof browser !== 'undefined' && !!browser.storage;
   }
 
   // 获取设置
@@ -217,10 +217,22 @@ class StorageService {
         return { sync: 0, local: 0 };
       }
 
-      const [syncUsage, localUsage] = await Promise.all([
-        browser.storage.sync.getBytesInUse(),
-        browser.storage.local.getBytesInUse(),
-      ]);
+            // 检查 getBytesInUse 方法是否存在
+      const promises: Promise<number>[] = [];
+
+      if (typeof (browser.storage.sync as any).getBytesInUse === 'function') {
+        promises.push((browser.storage.sync as any).getBytesInUse());
+      } else {
+        promises.push(Promise.resolve(0));
+      }
+
+      if (typeof (browser.storage.local as any).getBytesInUse === 'function') {
+        promises.push((browser.storage.local as any).getBytesInUse());
+      } else {
+        promises.push(Promise.resolve(0));
+      }
+
+      const [syncUsage, localUsage] = await Promise.all(promises);
 
       return {
         sync: syncUsage,

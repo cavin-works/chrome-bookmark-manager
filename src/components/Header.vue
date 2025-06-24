@@ -1,36 +1,44 @@
 <template>
-  <n-layout-header class="header" bordered>
-    <n-space justify="space-between" align="center" class="header-content">
-      <h1 class="title">{{ title }}</h1>
-      <n-space>
-        <n-button
-          circle
-          quaternary
-          @click="$emit('toggle-theme')"
+  <header class="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 theme-transition">
+    <div class="flex h-14 items-center justify-between px-4">
+      <h1 class="text-lg font-semibold gradient-text transition-smooth">{{ title }}</h1>
+      <div class="flex items-center space-x-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="handleThemeToggle"
           :title="currentTheme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
+          :class="cn('theme-toggle-feedback transition-smooth', {
+            'dark': currentTheme === 'dark'
+          })"
         >
-          <template #icon>
-            <n-icon>
-              <SunnyOutline v-if="currentTheme === 'dark'" />
-              <MoonOutline v-else />
-            </n-icon>
-          </template>
-        </n-button>
-        <n-button circle quaternary @click="$emit('show-settings')" title="设置">
-          <template #icon>
-            <n-icon>
-              <SettingsOutline />
-            </n-icon>
-          </template>
-        </n-button>
-      </n-space>
-    </n-space>
-  </n-layout-header>
+          <Sun
+            v-if="currentTheme === 'dark'"
+            :class="cn('h-4 w-4 icon-sun icon-theme-transition')"
+          />
+          <Moon
+            v-else
+            :class="cn('h-4 w-4 icon-moon icon-theme-transition')"
+          />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="$emit('show-settings')"
+          title="设置"
+          class="hover-glow transition-smooth"
+        >
+          <Settings class="h-4 w-4 icon-theme-transition" />
+        </Button>
+      </div>
+    </div>
+  </header>
 </template>
 
 <script setup lang="ts">
-import { NLayoutHeader, NSpace, NButton, NIcon } from 'naive-ui';
-import { SettingsOutline, SunnyOutline, MoonOutline } from '@vicons/ionicons5';
+import { Button } from '@/components/ui/button';
+import { Settings, Sun, Moon } from 'lucide-vue-next';
+import { cn } from '@/lib/utils';
 
 interface Props {
   title?: string;
@@ -42,8 +50,12 @@ withDefaults(defineProps<Props>(), {
   currentTheme: 'auto'
 });
 
-defineEmits<{
+const emit = defineEmits<{
   'toggle-theme': [];
   'show-settings': [];
 }>();
+
+const handleThemeToggle = () => {
+  emit('toggle-theme');
+};
 </script>

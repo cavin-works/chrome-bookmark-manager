@@ -8,22 +8,40 @@
     "build": "vue-tsc && vite build"
   },
   "dependencies": {
+    "@radix-icons/vue": "^1.0.0",
+    "@radix-ui/colors": "^3.0.0",
+    "@vee-validate/zod": "^4.15.1",
     "@vicons/ionicons5": "^0.13.0",
     "@vicons/tabler": "^0.13.0",
+    "@vueuse/core": "^13.4.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.523.0",
     "naive-ui": "^2.42.0",
+    "reka-ui": "^2.3.1",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "vee-validate": "^4.15.1",
     "vue": "^3.3",
     "vue-draggable-plus": "^0.6.0",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@stagewise-plugins/vue": "^0.4.6",
     "@stagewise/toolbar-vue": "^0.4.8",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/webextension-polyfill": "^0.10.0",
     "@vitejs/plugin-vue": "^4.5.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "shadcn-vue": "^2.2.0",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.6.3",
     "vite": "^5.0.0",
     "vite-plugin-web-extension": "^4.0.0",
     "vue-tsc": "^1.2.0",
     "webextension-polyfill": "^0.10.0"
-  }
+  },
+  "packageManager": "pnpm@8.7.6+sha512.649fcba43cbe20662908f628d8835f9f0d8ca2950e4c74371dc9e16e24aa54bb55e6b4e6b2b6c51dee22df92132e9720bc85a9b566f351367c79f0d85d6a457b"
 }
