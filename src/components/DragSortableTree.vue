@@ -20,7 +20,7 @@
           )"
           @click="handleSelect('')"
         >
-          <Bookmark class="mr-2 h-4 w-4" />
+          <BookmarkIcon class="mr-2 h-4 w-4" />
           <span class="flex-1 text-left">全部书签</span>
           <Badge variant="secondary" class="ml-auto">{{ totalBookmarks }}</Badge>
         </Button>
@@ -33,10 +33,10 @@
         :animation="200"
         ghost-class="opacity-50"
         chosen-class="bg-accent/50"
-        drag-class="rotate-1 scale-105"
-        @end="onDragEnd"
+        drag-class="drag-active"
+        @end="onRootDragEnd"
         tag="div"
-        class="space-y-0.5"
+        class="space-y-0.5 min-h-[20px]"
       >
         <TreeNodeItem
           v-for="folder in nestedTreeData"
@@ -45,6 +45,7 @@
           :selected-folder="selectedFolder"
           :level="0"
           @select="handleTreeSelect"
+          @drag-end="onChildDragEnd"
         />
       </VueDraggable>
     </div>
@@ -165,8 +166,8 @@ const handleReorder = () => {
   emit('reorder');
 };
 
-// 处理拖拽结束
-const onDragEnd = async (event: any) => {
+// 处理根级拖拽结束
+const onRootDragEnd = async (event: any) => {
   const { oldIndex, newIndex } = event;
 
   if (oldIndex === newIndex) {
@@ -252,6 +253,80 @@ const onDragEnd = async (event: any) => {
 // 递归处理选择事件
 const handleTreeSelect = (folderId: string) => {
   emit('select', folderId);
+};
+
+// 处理子节点拖拽结束
+const onChildDragEnd = async (event: any) => {
+  console.log('子节点拖拽事件:', event);
+
+  const { oldIndex, newIndex, parentId, level } = event;
+
+  if (oldIndex === newIndex) {
+    console.log('位置未改变，跳过同步');
+    return;
+  }
+
+  try {
+    // 找到拖拽的文件夹和目标父文件夹
+    const findFolderInTree = (tree: TreeNodeData[], folderId: string): TreeNodeData | null => {
+      for (const folder of tree) {
+        if (folder.id === folderId) return folder;
+        if (folder.children) {
+          const found = findFolderInTree(folder.children, folderId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const parentFolder = findFolderInTree(nestedTreeData.value, parentId);
+    if (!parentFolder || !parentFolder.children) {
+      console.error('找不到父文件夹');
+      return;
+    }
+
+    const draggedFolder = parentFolder.children[oldIndex];
+    if (!draggedFolder) {
+      console.error('找不到被拖拽的文件夹');
+      return;
+    }
+
+    console.log('子节点拖拽:', {
+      draggedFolder: draggedFolder.title,
+      parent: parentFolder.title,
+      oldIndex,
+      newIndex
+    });
+
+    // 调用Chrome API移动
+    await bookmarkService.moveBookmark(draggedFolder.id, {
+      parentId: parentId,
+      index: newIndex
+    });
+
+    const totalItems = await countTotalItemsInFolder(draggedFolder.id);
+    toast({
+      title: "移动成功",
+      description: `成功移动文件夹 "${draggedFolder.title}" 及其 ${totalItems.folders} 个子文件夹和 ${totalItems.bookmarks} 个书签！`,
+    });
+
+  } catch (error) {
+    console.error('子节点拖拽同步失败:', error);
+
+    // 恢复UI状态
+    buildNestedTree();
+
+    toast({
+      title: "移动失败",
+      description: "移动文件夹失败，请重试",
+      variant: "destructive",
+    });
+  }
+
+  // 延迟刷新数据
+  setTimeout(() => {
+    emit('reorder');
+  }, 300);
 };
 
 // 计算文件夹中的总项目数

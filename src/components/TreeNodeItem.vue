@@ -16,30 +16,37 @@
       </Badge>
     </div>
 
-    <!-- 子文件夹 -->
+    <!-- 子文件夹 - 支持所有文件夹都有拖拽区域 -->
     <VueDraggable
-      v-if="folder.children && folder.children.length > 0"
-      v-model="folder.children"
+      v-model="childrenModel"
       group="bookmark-folders"
       :animation="200"
       ghost-class="opacity-50"
       chosen-class="bg-accent/50"
-      drag-class="rotate-2 scale-105"
+              drag-class="drag-active"
+      @end="onDragEnd"
       tag="div"
+      class="min-h-[8px] border-l-2 border-dashed border-border/30 ml-2 pl-2"
     >
+      <!-- 空状态拖拽区域 -->
+      <div v-if="childrenModel.length === 0" class="h-6 rounded border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-xs text-muted-foreground">
+        拖拽文件夹到此处成为子文件夹
+      </div>
       <TreeNodeItem
-        v-for="childFolder in folder.children"
+        v-for="childFolder in childrenModel"
         :key="childFolder.id"
         :folder="childFolder"
         :selected-folder="selectedFolder"
         :level="level + 1"
         @select="$emit('select', $event)"
+        @drag-end="$emit('drag-end', $event)"
       />
     </VueDraggable>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Folder } from 'lucide-vue-next';
@@ -61,10 +68,30 @@ interface Props {
   level: number;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
-defineEmits<{
+const emit = defineEmits<{
   select: [folderId: string];
+  'drag-end': [event: any];
 }>();
+
+// 计算属性用于双向绑定子节点
+const childrenModel = computed({
+  get: () => props.folder.children,
+  set: (value) => {
+    // 直接更新引用
+    props.folder.children = value;
+  }
+});
+
+// 拖拽结束处理
+const onDragEnd = (event: any) => {
+  console.log('子节点拖拽结束:', event);
+  emit('drag-end', {
+    ...event,
+    parentId: props.folder.id,
+    level: props.level + 1
+  });
+};
 </script>
 

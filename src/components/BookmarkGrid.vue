@@ -60,7 +60,7 @@
             <div class="flex items-center space-x-3 flex-1 min-w-0">
               <div class="flex-shrink-0">
                 <img
-                  :src="getBookmarkIcon(bookmark)"
+                  :src="bookmark.icon || '/icon/default.png'"
                   :alt="bookmark.title"
                   class="w-8 h-8 rounded-md"
                   @error="handleImageError"
@@ -143,26 +143,8 @@ defineEmits<{
   'delete-bookmark': [bookmark: Bookmark];
 }>();
 
-// 获取书签图标
-const getBookmarkIcon = (bookmark: Bookmark) => {
-  // 如果有自定义图标，使用自定义图标
-  if (bookmark.icon && bookmark.icon !== '/icon/default.png') {
-    return bookmark.icon;
-  }
-
-  // 如果有URL，尝试生成favicon URL
-  if (bookmark.url) {
-    try {
-      const url = new URL(bookmark.url);
-      return `${url.protocol}//${url.hostname}/favicon.ico`;
-    } catch (error) {
-      console.warn('无效的URL:', bookmark.url);
-    }
-  }
-
-  // 默认图标
-  return '/icon/default.png';
-};
+// 移除重复的图标逻辑，直接使用 bookmark.icon
+// 图标加载由 NewTab.vue 中的 iconService 统一处理
 
 // 处理图片加载错误
 const handleImageError = (event: Event) => {
@@ -174,8 +156,9 @@ const handleImageError = (event: Event) => {
 const handleDragStart = (event: DragEvent, bookmark: Bookmark) => {
   if (!event.dataTransfer) return;
 
-  // 设置拖拽数据
-  event.dataTransfer.setData('text/plain', JSON.stringify(bookmark));
+  // 设置拖拽数据 - 使用自定义 MIME 类型避免与其他文本数据冲突
+  event.dataTransfer.setData('application/x-bookmark', JSON.stringify(bookmark));
+  event.dataTransfer.setData('text/plain', bookmark.url || bookmark.title); // 备用数据
   event.dataTransfer.effectAllowed = 'move';
 
   // 添加拖拽样式

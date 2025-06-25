@@ -11,8 +11,9 @@ interface IconCache {
 
 class IconService {
   private cache: IconCache = {};
+  private loadingPromises: Map<string, Promise<string>> = new Map(); // 避免重复请求
 
-  // 获取书签图标
+  // 获取书签图标（添加防重复请求机制）
   async getBookmarkIcon(url: string, size: number = ICON_CONFIG.DEFAULT_SIZE): Promise<string> {
     if (!url || !isValidUrl(url)) {
       return this.getDefaultIcon();
@@ -22,9 +23,31 @@ class IconService {
 
     // 检查缓存
     if (this.cache[cacheKey] && this.isCacheValid(this.cache[cacheKey].timestamp)) {
+      console.log('从缓存获取图标:', url);
       return this.cache[cacheKey].iconUrl;
     }
 
+    // 检查是否已有正在进行的请求
+    if (this.loadingPromises.has(cacheKey)) {
+      console.log('等待现有请求完成:', url);
+      return this.loadingPromises.get(cacheKey)!;
+    }
+
+    // 创建新的加载Promise
+    const loadingPromise = this.fetchIconWithFallback(url, size, cacheKey);
+    this.loadingPromises.set(cacheKey, loadingPromise);
+
+    try {
+      const iconUrl = await loadingPromise;
+      return iconUrl;
+    } finally {
+      // 清理Promise引用
+      this.loadingPromises.delete(cacheKey);
+    }
+  }
+
+  // 内部方法：获取图标并处理失败情况
+  private async fetchIconWithFallback(url: string, size: number, cacheKey: string): Promise<string> {
     try {
       const iconUrl = await this.fetchFavicon(url, size);
 
@@ -49,6 +72,7 @@ class IconService {
           timestamp: Date.now(),
         };
 
+        console.log('使用文字图标作为备用:', domain);
         return fallbackIcon;
       }
 
@@ -138,20 +162,51 @@ class IconService {
     };
   }
 
-  // 批量获取图标
+  // 批量获取图标（优化：控制并发数量，避免过多同时请求）
   async getBatchIcons(urls: string[], size: number = ICON_CONFIG.DEFAULT_SIZE): Promise<{ [url: string]: string }> {
     const results: { [url: string]: string } = {};
 
-    const promises = urls.map(async (url) => {
-      try {
-        const icon = await this.getBookmarkIcon(url, size);
-        results[url] = icon;
-      } catch (error) {
-        results[url] = this.getDefaultIcon();
+    // 过滤出需要加载的URL（未缓存的）
+    const urlsToLoad = urls.filter(url => {
+      const cacheKey = `${url}_${size}`;
+      if (this.cache[cacheKey] && this.isCacheValid(this.cache[cacheKey].timestamp)) {
+        // 已缓存，直接设置结果
+        results[url] = this.cache[cacheKey].iconUrl;
+        return false;
       }
+      return true;
     });
 
-    await Promise.all(promises);
+    console.log(`批量加载图标: 总计 ${urls.length} 个，需要加载 ${urlsToLoad.length} 个`);
+
+    if (urlsToLoad.length === 0) {
+      return results;
+    }
+
+    // 分批处理，避免过多并发请求
+    const batchSize = 5;
+    for (let i = 0; i < urlsToLoad.length; i += batchSize) {
+      const batch = urlsToLoad.slice(i, i + batchSize);
+
+      const batchPromises = batch.map(async (url) => {
+        try {
+          const icon = await this.getBookmarkIcon(url, size);
+          results[url] = icon;
+        } catch (error) {
+          console.warn('批量加载图标失败:', url, error);
+          results[url] = this.getDefaultIcon();
+        }
+      });
+
+      await Promise.all(batchPromises);
+
+      // 批次间短暂延迟，避免过度占用资源
+      if (i + batchSize < urlsToLoad.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log('批量图标加载完成');
     return results;
   }
 }

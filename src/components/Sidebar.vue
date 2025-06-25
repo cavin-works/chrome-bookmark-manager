@@ -142,16 +142,65 @@ const handleDrop = (event: DragEvent) => {
   const target = event.currentTarget as HTMLElement;
   target.classList.remove('drag-over');
 
-  // 处理拖拽数据
+    // 处理拖拽数据
   try {
-    const bookmarkData = event.dataTransfer?.getData('text/plain');
-    if (bookmarkData) {
-      const bookmark = JSON.parse(bookmarkData) as BookmarkType;
-      // 这里可以添加将书签移动到侧边栏的逻辑
-      console.log('拖拽书签到侧边栏:', bookmark);
+    if (!event.dataTransfer) {
+      console.warn('无拖拽数据');
+      return;
     }
+
+    // 首先检查是否有自定义的书签数据
+    const bookmarkData = event.dataTransfer.getData('application/x-bookmark');
+    if (bookmarkData && bookmarkData.trim()) {
+      try {
+        // 验证是否为有效的JSON
+        if (bookmarkData.startsWith('{') && bookmarkData.endsWith('}')) {
+          const bookmark = JSON.parse(bookmarkData) as BookmarkType;
+          console.log('拖拽书签到侧边栏:', bookmark);
+          // 这里可以添加将书签移动到侧边栏的逻辑
+          return;
+        } else {
+          console.warn('书签数据格式无效，不是JSON:', bookmarkData.substring(0, 50) + '...');
+        }
+      } catch (parseError) {
+        console.warn('书签数据解析失败:', parseError, 'Data:', bookmarkData.substring(0, 100) + '...');
+      }
+    }
+
+    // 检查是否是文本数据（可能是URL或普通文本）
+    const textData = event.dataTransfer.getData('text/plain');
+    if (textData && textData.trim()) {
+      console.log('拖拽文本数据:', textData.substring(0, 100) + (textData.length > 100 ? '...' : ''));
+
+      // 检查是否是有效的URL
+      try {
+        const url = new URL(textData.trim());
+        console.log('检测到URL拖拽:', url.href);
+        // 可以在这里添加从URL创建书签的逻辑
+        return;
+      } catch (urlError) {
+        // 不是有效的URL，可能只是普通文本
+        console.log('普通文本拖拽，忽略处理');
+        return;
+      }
+    }
+
+    // 检查是否有URL数据
+    const urlData = event.dataTransfer.getData('text/uri-list');
+    if (urlData && urlData.trim()) {
+      console.log('拖拽URL列表:', urlData);
+      // 处理URL列表
+      const urls = urlData.split('\n').filter(url => url.trim() && !url.startsWith('#'));
+      urls.forEach(url => {
+        console.log('处理URL:', url.trim());
+      });
+      return;
+    }
+
+    console.log('未处理的拖拽类型，所有可用数据类型:', Array.from(event.dataTransfer.types));
+
   } catch (error) {
-    console.error('拖拽数据解析失败:', error);
+    console.error('拖拽处理失败:', error);
   }
 };
 </script>

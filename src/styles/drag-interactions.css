@@ -306,7 +306,9 @@
   }
 
   .drag-active {
-    @apply cursor-grabbing select-none;
+    @apply cursor-grabbing select-none transform rotate-1 scale-105;
+    z-index: 1000;
+    transition: transform 0.2s ease-out;
   }
 
   .no-drag {

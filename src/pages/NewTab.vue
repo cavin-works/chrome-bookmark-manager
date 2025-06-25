@@ -321,19 +321,52 @@ const addFolder = async (formData: any) => {
   }
 };
 
-// 异步加载书签图标
+// 优化的图标加载，避免重复请求
 const loadBookmarkIcons = async (bookmarkList: Bookmark[]) => {
   console.log('开始后台加载图标...');
 
-  // 批量处理图标加载，避免同时发起太多请求
-  const batchSize = 5;
-  for (let i = 0; i < bookmarkList.length; i += batchSize) {
-    const batch = bookmarkList.slice(i, i + batchSize);
+  // 过滤出需要加载图标的书签（没有图标或使用默认图标的）
+  const bookmarksNeedingIcons = bookmarkList.filter(bookmark =>
+    bookmark.url &&
+    (!bookmark.icon || bookmark.icon === '/icon/default.png')
+  );
 
-    const iconPromises = batch.map(async (bookmark) => {
-      if (bookmark.url) {
+  if (bookmarksNeedingIcons.length === 0) {
+    console.log('所有书签都已有图标，跳过加载');
+    return;
+  }
+
+  console.log(`需要加载图标的书签数量: ${bookmarksNeedingIcons.length}`);
+
+  // 使用 iconService 的批量加载功能
+  try {
+    const urls = bookmarksNeedingIcons.map(bookmark => bookmark.url!);
+    const iconResults = await iconService.getBatchIcons(urls);
+
+    // 更新书签图标
+    bookmarksNeedingIcons.forEach(bookmark => {
+      const iconUrl = iconResults[bookmark.url!];
+      if (iconUrl) {
+        // 找到对应的书签并更新图标
+        const bookmarkIndex = bookmarks.value.findIndex(b => b.id === bookmark.id);
+        if (bookmarkIndex !== -1) {
+          bookmarks.value[bookmarkIndex].icon = iconUrl;
+        }
+      }
+    });
+
+    console.log('批量图标加载完成');
+  } catch (error) {
+    console.error('批量图标加载失败:', error);
+
+    // 降级到逐个加载（更小的批次）
+    const batchSize = 3;
+    for (let i = 0; i < bookmarksNeedingIcons.length; i += batchSize) {
+      const batch = bookmarksNeedingIcons.slice(i, i + batchSize);
+
+      const iconPromises = batch.map(async (bookmark) => {
         try {
-          const icon = await iconService.getBookmarkIcon(bookmark.url);
+          const icon = await iconService.getBookmarkIcon(bookmark.url!);
           // 找到对应的书签并更新图标
           const bookmarkIndex = bookmarks.value.findIndex(b => b.id === bookmark.id);
           if (bookmarkIndex !== -1) {
@@ -343,24 +376,24 @@ const loadBookmarkIcons = async (bookmarkList: Bookmark[]) => {
           console.warn('加载图标失败:', bookmark.title, bookmark.url, error?.message || error);
           // 保持默认图标，不做处理
         }
+      });
+
+      await Promise.all(iconPromises);
+
+      // 每批之间稍微延迟，避免过度占用资源
+      if (i + batchSize < bookmarksNeedingIcons.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-    });
-
-    await Promise.all(iconPromises);
-
-    // 每批之间稍微延迟，避免过度占用资源
-    if (i + batchSize < bookmarkList.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
     }
-  }
 
-  console.log('图标加载完成');
+    console.log('逐个图标加载完成');
+  }
 };
 
-const loadBookmarks = async () => {
+// 加载书签数据但不加载图标（用于重新排序等场景）
+const loadBookmarksWithoutIcons = async () => {
   try {
-    loading.value = true;
-    console.log('开始加载书签...');
+    console.log('开始加载书签数据（不含图标）...');
 
     // 加载书签树
     const bookmarkTree = await bookmarkService.getBookmarkTree();
@@ -373,7 +406,6 @@ const loadBookmarks = async () => {
     // 提取文件夹
     const folders = await bookmarkService.getBookmarkFolders();
     console.log('获取到文件夹数量:', folders.length);
-    console.log('原始文件夹数据:', folders);
 
     // 清理文件夹数据，过滤掉无效的文件夹
     const cleanedFolders = folders.filter(folder => {
@@ -385,9 +417,8 @@ const loadBookmarks = async () => {
       return true;
     });
     console.log('清理后文件夹数量:', cleanedFolders.length);
-    console.log('清理后文件夹数据:', cleanedFolders);
 
-    // 先设置默认图标并立即渲染书签
+    // 设置默认图标（如果没有图标）
     allBookmarks.forEach(bookmark => {
       if (bookmark.url && !bookmark.icon) {
         bookmark.icon = '/icon/default.png'; // 设置默认图标
@@ -398,11 +429,23 @@ const loadBookmarks = async () => {
     bookmarks.value = allBookmarks;
     bookmarkFolders.value = cleanedFolders;
 
-    // 调试：输出最终的bookmarkFolders.value
-    console.log('设置bookmarkFolders.value:', bookmarkFolders.value);
+    console.log('书签和文件夹数据加载完成（无图标）');
+  } catch (error) {
+    console.error('加载书签数据失败:', error);
+    throw error;
+  }
+};
+
+const loadBookmarks = async () => {
+  try {
+    loading.value = true;
+    console.log('开始加载书签...');
+
+    // 先加载基础数据
+    await loadBookmarksWithoutIcons();
 
     // 后台异步加载图标
-    loadBookmarkIcons(allBookmarks);
+    loadBookmarkIcons(bookmarks.value);
     console.log('书签和文件夹加载完成');
   } catch (error) {
     console.error('加载书签失败:', error);
@@ -449,12 +492,26 @@ const loadBookmarks = async () => {
   }
 };
 
-// 处理文件夹重新排序
+// 处理文件夹重新排序（优化：只重新加载数据结构，不重复加载图标）
 const handleFolderReorder = async () => {
   console.log('文件夹已重新排序，重新加载数据...');
   try {
+    // 保存当前的图标状态
+    const currentIcons = new Map(
+      bookmarks.value.map(bookmark => [bookmark.id, bookmark.icon])
+    );
+
     // 重新加载书签和文件夹数据
-    await loadBookmarks();
+    await loadBookmarksWithoutIcons();
+
+    // 恢复图标状态
+    bookmarks.value.forEach(bookmark => {
+      const savedIcon = currentIcons.get(bookmark.id);
+      if (savedIcon && savedIcon !== '/icon/default.png') {
+        bookmark.icon = savedIcon;
+      }
+    });
+
     toast({
       title: "排序成功",
       description: "文件夹排序已更新",
@@ -536,10 +593,39 @@ onMounted(async () => {
   await loadSettings();
   await loadBookmarks();
 
-  // 设置书签变化监听器
+  // 设置书签变化监听器（优化：保留现有图标，只更新数据结构）
   bookmarkService.addListener(async () => {
     console.log('书签发生变化，重新加载...');
-    await loadBookmarks();
+
+    // 保存当前的图标状态
+    const currentIcons = new Map(
+      bookmarks.value.map(bookmark => [bookmark.id, bookmark.icon])
+    );
+
+    try {
+      // 只重新加载数据结构
+      await loadBookmarksWithoutIcons();
+
+      // 恢复已加载的图标，并为新书签加载图标
+      const newBookmarks = bookmarks.value.filter(bookmark => !currentIcons.has(bookmark.id));
+
+      bookmarks.value.forEach(bookmark => {
+        const savedIcon = currentIcons.get(bookmark.id);
+        if (savedIcon && savedIcon !== '/icon/default.png') {
+          bookmark.icon = savedIcon;
+        }
+      });
+
+      // 只为新书签加载图标
+      if (newBookmarks.length > 0) {
+        console.log(`检测到 ${newBookmarks.length} 个新书签，加载图标...`);
+        await loadBookmarkIcons(newBookmarks);
+      }
+    } catch (error) {
+      console.error('书签变化处理失败:', error);
+      // 降级到完整重新加载
+      await loadBookmarks();
+    }
   });
 
   console.log('NewTab组件初始化完成');
