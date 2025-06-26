@@ -311,6 +311,116 @@
     transition: transform 0.2s ease-out;
   }
 
+  /* 原生拖拽增强样式 */
+  .folder-item {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .folder-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 精确拖拽位置指示器 */
+  .folder-item.insert-before::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 8px;
+    right: 8px;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.6));
+    border-radius: 2px;
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+    animation: dropIndicatorPulse 1.5s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  .folder-item.insert-after::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 8px;
+    right: 8px;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.6));
+    border-radius: 2px;
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+    animation: dropIndicatorPulse 1.5s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  .folder-item.drag-over {
+    background: hsl(var(--accent));
+    border: 2px dashed hsl(var(--primary));
+    border-radius: 8px;
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.2);
+  }
+
+  .folder-item.drag-over::before {
+    content: '📁 放置到此文件夹内';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* 拖拽指示器动画 */
+  @keyframes dropIndicatorPulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scaleY(0.8);
+    }
+  }
+
+  /* 拖拽中状态 */
+  .folder-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg) scale(0.95);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* 拖拽预览效果 */
+  .folder-item[draggable="true"]:active {
+    cursor: grabbing;
+    transform: rotate(1deg) scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  /* 防止拖拽到错误位置的视觉提示 */
+  .folder-item.invalid-drop {
+    background: hsl(var(--destructive) / 0.1);
+    border: 2px dashed hsl(var(--destructive));
+    animation: invalidDrop 0.3s ease-in-out;
+  }
+
+  @keyframes invalidDrop {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-2px);
+    }
+    75% {
+      transform: translateX(2px);
+    }
+  }
+
   .no-drag {
     @apply cursor-default;
     -webkit-user-drag: none;

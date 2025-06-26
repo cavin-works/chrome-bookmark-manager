@@ -4,7 +4,7 @@
     <div v-if="!hideAllBookmarks && nestedTreeData.length > 0" class="px-2">
       <div class="rounded-md bg-muted/50 p-2">
         <p class="text-xs text-muted-foreground">
-          💡 提示：拖拽文件夹进行排序，Chrome会自动移动其所有子内容。智能防护确保不会移动到错误位置。
+          💡 提示：拖拽文件夹进行排序，支持精确位置插入。智能防护确保不会移动到错误位置。
         </p>
       </div>
     </div>
@@ -26,28 +26,20 @@
         </Button>
       </div>
 
-      <!-- 嵌套的可拖拽文件夹列表 -->
-      <VueDraggable
-        v-model="nestedTreeData"
-        group="bookmark-folders"
-        :animation="200"
-        ghost-class="opacity-50"
-        chosen-class="bg-accent/50"
-        drag-class="drag-active"
-        @end="onRootDragEnd"
-        tag="div"
-        class="space-y-0.5 min-h-[20px]"
-      >
-        <TreeNodeItem
+      <!-- 原生拖拽实现的文件夹树 -->
+      <div class="space-y-0.5 px-2">
+        <TreeNodeItemNative
           v-for="folder in nestedTreeData"
           :key="folder.id"
           :folder="folder"
           :selected-folder="selectedFolder"
           :level="0"
+          :all-folders="bookmarkFolders"
           @select="handleTreeSelect"
-          @drag-end="onChildDragEnd"
+          @move="handleFolderMove"
+          @reorder="handleReorder"
         />
-      </VueDraggable>
+      </div>
     </div>
   </div>
 </template>
@@ -60,9 +52,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Bookmark as BookmarkIcon } from 'lucide-vue-next';
 import type { Bookmark as BookmarkType, BookmarkFolder } from '../utils/types';
-import { VueDraggable } from 'vue-draggable-plus';
 import { bookmarkService } from '../services/bookmarkService';
-import TreeNodeItem from './TreeNodeItem.vue';
+import TreeNodeItemNative from './TreeNodeItemNative.vue';
 
 // 设置组件名，支持递归
 defineOptions({
@@ -166,59 +157,89 @@ const handleReorder = () => {
   emit('reorder');
 };
 
-// 处理根级拖拽结束
-const onRootDragEnd = async (event: any) => {
-  const { oldIndex, newIndex } = event;
-
-  if (oldIndex === newIndex) {
-    console.log('位置未改变，跳过同步');
-    return;
-  }
-
-  console.log('=== 开始嵌套拖拽同步 ===');
-  console.log('拖拽事件信息:', { oldIndex, newIndex, event });
+// 处理文件夹移动（新的原生拖拽方式）
+const handleFolderMove = async (moveData: {
+  sourceId: string;
+  targetId: string;
+  position: 'before' | 'after' | 'inside';
+  sourceIndex: number;
+  targetIndex: number;
+}) => {
+  console.log('=== 开始原生拖拽移动 ===');
+  console.log('移动数据:', moveData);
 
   try {
-    // 直接使用nestedTreeData中被拖拽的项目
-    const draggedFolder = nestedTreeData.value[oldIndex];
-    if (!draggedFolder) {
-      console.error('找不到被拖拽的文件夹');
+    const { sourceId, targetId, position } = moveData;
+
+    // 检查是否试图将文件夹移动到其子文件夹中
+    const isMovingToChild = await checkIfMovingToChild(sourceId, targetId);
+    if (isMovingToChild) {
       toast({
-        title: "错误",
-        description: "找不到被拖拽的文件夹",
+        title: "移动失败",
+        description: "不能将文件夹移动到自己的子文件夹中",
         variant: "destructive",
       });
       return;
     }
 
-    console.log('被拖拽的文件夹:', draggedFolder);
+    let newParentId = '';
+    let newIndex = 0;
 
-    // 计算新的位置 - 同级移动
-    const targetFolder = nestedTreeData.value[newIndex];
-    const parentId = draggedFolder.parentId || '1';
+    if (position === 'inside') {
+      // 移动到文件夹内部
+      newParentId = targetId;
+      newIndex = 0;
+    } else {
+      // 移动到文件夹的前面或后面（同级操作）
+      const targetFolder = props.bookmarkFolders.find(f => f.id === targetId);
+      if (!targetFolder) {
+        throw new Error('找不到目标文件夹');
+      }
+
+      newParentId = targetFolder.parentId || '1';
+
+      // 计算新的索引位置
+      const siblings = props.bookmarkFolders.filter(f => f.parentId === newParentId);
+      const targetSiblingIndex = siblings.findIndex(f => f.id === targetId);
+
+      if (position === 'before') {
+        newIndex = targetSiblingIndex;
+      } else {
+        newIndex = targetSiblingIndex + 1;
+      }
+
+      // 如果源文件夹在同一父文件夹中且在目标之前，需要调整索引
+      const sourceFolder = props.bookmarkFolders.find(f => f.id === sourceId);
+      if (sourceFolder && sourceFolder.parentId === newParentId) {
+        const sourceSiblingIndex = siblings.findIndex(f => f.id === sourceId);
+        if (sourceSiblingIndex < targetSiblingIndex) {
+          newIndex--;
+        }
+      }
+    }
 
     // 调用Chrome书签API移动文件夹
-    const result = await bookmarkService.moveBookmark(draggedFolder.id, {
-      parentId: parentId,
+    const result = await bookmarkService.moveBookmark(sourceId, {
+      parentId: newParentId,
       index: newIndex
     });
 
     console.log('Chrome API 移动结果:', result);
-    console.log('=== 嵌套拖拽同步完成 ===');
 
     // 统计移动的项目
-    const totalItems = await countTotalItemsInFolder(draggedFolder.id);
+    const totalItems = await countTotalItemsInFolder(sourceId);
+    const sourceFolder = props.bookmarkFolders.find(f => f.id === sourceId);
+
     toast({
       title: "移动成功",
-      description: `成功移动文件夹 "${draggedFolder.title}" 及其 ${totalItems.folders} 个子文件夹和 ${totalItems.bookmarks} 个书签！`,
+      description: `成功移动文件夹 "${sourceFolder?.title}" 及其 ${totalItems.folders} 个子文件夹和 ${totalItems.bookmarks} 个书签！`,
     });
 
-  } catch (error) {
-    console.error('=== 嵌套拖拽同步失败 ===');
-    console.error('错误详情:', error);
+    console.log('=== 原生拖拽移动完成 ===');
 
-    // 恢复UI状态
-    buildNestedTree();
+  } catch (error) {
+    console.error('=== 原生拖拽移动失败 ===');
+    console.error('错误详情:', error);
 
     if (error instanceof Error) {
       if (error.message.includes('descendant')) {
@@ -250,83 +271,30 @@ const onRootDragEnd = async (event: any) => {
   }, 300);
 };
 
+// 检查是否试图移动到子文件夹
+const checkIfMovingToChild = async (sourceId: string, targetId: string): Promise<boolean> => {
+  // 递归检查目标文件夹是否是源文件夹的后代
+  const checkDescendant = (folderId: string): boolean => {
+    if (folderId === sourceId) {
+      return true;
+    }
+
+    const childFolders = props.bookmarkFolders.filter(f => f.parentId === folderId);
+    for (const child of childFolders) {
+      if (checkDescendant(child.id)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  return checkDescendant(targetId);
+};
+
 // 递归处理选择事件
 const handleTreeSelect = (folderId: string) => {
   emit('select', folderId);
-};
-
-// 处理子节点拖拽结束
-const onChildDragEnd = async (event: any) => {
-  console.log('子节点拖拽事件:', event);
-
-  const { oldIndex, newIndex, parentId, level } = event;
-
-  if (oldIndex === newIndex) {
-    console.log('位置未改变，跳过同步');
-    return;
-  }
-
-  try {
-    // 找到拖拽的文件夹和目标父文件夹
-    const findFolderInTree = (tree: TreeNodeData[], folderId: string): TreeNodeData | null => {
-      for (const folder of tree) {
-        if (folder.id === folderId) return folder;
-        if (folder.children) {
-          const found = findFolderInTree(folder.children, folderId);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const parentFolder = findFolderInTree(nestedTreeData.value, parentId);
-    if (!parentFolder || !parentFolder.children) {
-      console.error('找不到父文件夹');
-      return;
-    }
-
-    const draggedFolder = parentFolder.children[oldIndex];
-    if (!draggedFolder) {
-      console.error('找不到被拖拽的文件夹');
-      return;
-    }
-
-    console.log('子节点拖拽:', {
-      draggedFolder: draggedFolder.title,
-      parent: parentFolder.title,
-      oldIndex,
-      newIndex
-    });
-
-    // 调用Chrome API移动
-    await bookmarkService.moveBookmark(draggedFolder.id, {
-      parentId: parentId,
-      index: newIndex
-    });
-
-    const totalItems = await countTotalItemsInFolder(draggedFolder.id);
-    toast({
-      title: "移动成功",
-      description: `成功移动文件夹 "${draggedFolder.title}" 及其 ${totalItems.folders} 个子文件夹和 ${totalItems.bookmarks} 个书签！`,
-    });
-
-  } catch (error) {
-    console.error('子节点拖拽同步失败:', error);
-
-    // 恢复UI状态
-    buildNestedTree();
-
-    toast({
-      title: "移动失败",
-      description: "移动文件夹失败，请重试",
-      variant: "destructive",
-    });
-  }
-
-  // 延迟刷新数据
-  setTimeout(() => {
-    emit('reorder');
-  }, 300);
 };
 
 // 计算文件夹中的总项目数
