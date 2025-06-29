@@ -35,5 +35,11 @@
   "background": {
     "{{chrome}}.service_worker": "src/background.ts",
     "{{firefox}}.scripts": ["src/background.ts"]
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icon/*.svg", "icon/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

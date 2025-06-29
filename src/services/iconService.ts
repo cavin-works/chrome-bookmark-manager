@@ -1,6 +1,7 @@
 import { IconInfo } from '../utils/types';
 import { ICON_CONFIG } from '../utils/constants';
 import { getDomain, isValidUrl } from '../utils/helpers';
+import { getDefaultIcon as getDefaultIconUtil } from '../utils/defaultIcon';
 
 interface IconCache {
   [url: string]: {
@@ -131,7 +132,7 @@ class IconService {
 
   // 获取默认图标
   private getDefaultIcon(): string {
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iI0Y1RjVGNiIvPgo8cGF0aCBkPSJNMTYgOEwxMiAxMkwxNiAxNkwxMiAyMEg4TDEyIDE2SDhWMTJIMTJMMTggOEgxNloiIGZpbGw9IiM2Qjc4OTAiLz4KPC9zdmc+';
+    return getDefaultIconUtil();
   }
 
   // 检查缓存是否有效

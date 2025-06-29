@@ -4,10 +4,8 @@
       'relative group',
       'folder-item',
       isSelected && 'bg-accent text-accent-foreground font-medium',
-      isDragging && 'opacity-50',
-      dragPosition === 'before' && 'insert-before',
-      dragPosition === 'after' && 'insert-after',
-      dragPosition === 'inside' && 'drag-over'
+      globalDragState.draggedFolderId === folder.id && 'opacity-50',
+      isCurrentDropTarget && getDropIndicatorClass()
     )"
     :style="{ paddingLeft: `${level * 16 + 8}px` }"
     :data-folder-id="folder.id"
@@ -15,22 +13,22 @@
     @click="handleClick"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
-    @dragenter="handleDragEnter"
-    @dragover="handleDragOver"
-    @dragleave="handleDragLeave"
-    @drop="handleDrop"
+    @dragenter.stop="handleDragEnter"
+    @dragover.prevent.stop="handleDragOver"
+    @dragleave.stop="handleDragLeave"
+    @drop.prevent.stop="handleDrop"
   >
     <!-- 拖拽位置指示器 -->
     <div
-      v-if="dragPosition === 'before'"
+      v-if="isCurrentDropTarget && globalDragState.dragPosition === 'before'"
       class="absolute top-0 left-0 right-0 h-0.5 bg-primary rounded-full drop-indicator"
     ></div>
     <div
-      v-if="dragPosition === 'after'"
+      v-if="isCurrentDropTarget && globalDragState.dragPosition === 'after'"
       class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full drop-indicator"
     ></div>
     <div
-      v-if="dragPosition === 'inside'"
+      v-if="isCurrentDropTarget && globalDragState.dragPosition === 'inside'"
       class="absolute inset-0 border-2 border-primary border-dashed rounded-md opacity-50"
     ></div>
 
@@ -43,20 +41,27 @@
       </Badge>
     </div>
 
-    <!-- 子文件夹 -->
-    <div v-if="folder.children && folder.children.length > 0" class="mt-1">
-      <TreeNodeItemNative
-        v-for="child in folder.children"
-        :key="child.id"
-        :folder="child"
-        :selected-folder="selectedFolder"
-        :level="level + 1"
-        :all-folders="allFolders"
-        @select="$emit('select', $event)"
-        @move="$emit('move', $event)"
-        @reorder="$emit('reorder')"
-      />
-    </div>
+    <!-- 子文件夹 - 移到外层容器以避免事件冲突 -->
+  </div>
+
+  <!-- 子文件夹独立容器 -->
+  <div v-if="folder.children && folder.children.length > 0" class="mt-1">
+    <TreeNodeItemNative
+      v-for="child in folder.children"
+      :key="child.id"
+      :folder="child"
+      :selected-folder="selectedFolder"
+      :level="level + 1"
+      :all-folders="allFolders"
+      :global-drag-state="globalDragState"
+      @select="$emit('select', $event)"
+      @move="$emit('move', $event)"
+      @reorder="$emit('reorder')"
+      @drag-start="$emit('drag-start', $event)"
+      @drag-end="$emit('drag-end')"
+      @drag-enter="$emit('drag-enter', $event)"
+      @drag-leave="$emit('drag-leave', $event)"
+    />
   </div>
 </template>
 
@@ -88,11 +93,19 @@ interface BookmarkFolder {
   index?: number;
 }
 
+interface GlobalDragState {
+  isDragging: boolean;
+  draggedFolderId: string;
+  currentDropTarget: string;
+  dragPosition: 'before' | 'after' | 'inside' | null;
+}
+
 interface Props {
   folder: TreeNodeData;
   selectedFolder: string;
   level: number;
   allFolders: BookmarkFolder[];
+  globalDragState: GlobalDragState;
 }
 
 const props = defineProps<Props>();
@@ -107,17 +120,20 @@ const emit = defineEmits<{
     targetIndex: number;
   }];
   reorder: [];
+  'drag-start': [folderId: string];
+  'drag-end': [];
+  'drag-enter': [data: { folderId: string; position: 'before' | 'after' | 'inside' }];
+  'drag-leave': [folderId: string];
 }>();
-
-// 响应式状态
-const isDragging = ref(false);
-const dragPosition = ref<'before' | 'after' | 'inside' | null>(null);
 
 // 计算属性
 const isSelected = computed(() => props.selectedFolder === props.folder.id);
+const isCurrentDropTarget = computed(() =>
+  props.globalDragState.currentDropTarget === props.folder.id
+);
 
-// 拖拽数据存储
-let draggedFolderId = '';
+// 拖拽超时处理
+let dragLeaveTimeout: number | null = null;
 
 // 事件处理
 const handleClick = (event: MouseEvent) => {
@@ -137,57 +153,71 @@ const handleDragStart = (event: DragEvent) => {
 
   if (!event.dataTransfer) return;
 
-  isDragging.value = true;
-  draggedFolderId = props.folder.id;
-
   // 设置拖拽数据
   event.dataTransfer.setData('text/plain', props.folder.id);
   event.dataTransfer.effectAllowed = 'move';
+
+  // 通知全局拖拽开始
+  emit('drag-start', props.folder.id);
 
   console.log('开始拖拽文件夹:', props.folder.title);
 };
 
 const handleDragEnd = () => {
-  isDragging.value = false;
-  dragPosition.value = null;
-  draggedFolderId = '';
-
-  // 清理所有元素的拖拽状态
-  document.querySelectorAll('.folder-item').forEach(el => {
-    el.classList.remove('drag-over', 'insert-before', 'insert-after');
-  });
-
+  // 通知全局拖拽结束
+  emit('drag-end');
   console.log('拖拽结束');
 };
 
 const handleDragEnter = (event: DragEvent) => {
   event.preventDefault();
-  if (!event.dataTransfer || draggedFolderId === props.folder.id) return;
 
-  updateDragPosition(event);
+  // 清除之前的超时
+  if (dragLeaveTimeout) {
+    clearTimeout(dragLeaveTimeout);
+    dragLeaveTimeout = null;
+  }
+
+  if (!props.globalDragState.isDragging ||
+      props.globalDragState.draggedFolderId === props.folder.id) {
+    return;
+  }
+
+  const position = calculateDragPosition(event);
+  emit('drag-enter', { folderId: props.folder.id, position });
 };
 
 const handleDragOver = (event: DragEvent) => {
   event.preventDefault();
-  if (!event.dataTransfer || draggedFolderId === props.folder.id) return;
 
-  event.dataTransfer.dropEffect = 'move';
-  updateDragPosition(event);
+  if (!props.globalDragState.isDragging ||
+      props.globalDragState.draggedFolderId === props.folder.id) {
+    return;
+  }
+
+  event.dataTransfer!.dropEffect = 'move';
+
+  const position = calculateDragPosition(event);
+  emit('drag-enter', { folderId: props.folder.id, position });
 };
 
 const handleDragLeave = (event: DragEvent) => {
-  const relatedTarget = event.relatedTarget as HTMLElement;
-  const currentElement = event.currentTarget as HTMLElement;
-
-  // 如果鼠标移动到子元素，不清除状态
-  if (!relatedTarget || !currentElement.contains(relatedTarget)) {
-    dragPosition.value = null;
-  }
+  // 使用超时来避免快速进出导致的状态闪烁
+  dragLeaveTimeout = setTimeout(() => {
+    emit('drag-leave', props.folder.id);
+  }, 50);
 };
 
 const handleDrop = (event: DragEvent) => {
   event.preventDefault();
-  if (!event.dataTransfer || !dragPosition.value) return;
+
+  // 清除超时
+  if (dragLeaveTimeout) {
+    clearTimeout(dragLeaveTimeout);
+    dragLeaveTimeout = null;
+  }
+
+  if (!event.dataTransfer || !props.globalDragState.dragPosition) return;
 
   const sourceId = event.dataTransfer.getData('text/plain');
   if (!sourceId || sourceId === props.folder.id) return;
@@ -195,7 +225,6 @@ const handleDrop = (event: DragEvent) => {
   // 检查是否试图移动到子文件夹
   if (isMovingToChild(sourceId, props.folder.id)) {
     console.warn('不能将文件夹移动到自己的子文件夹中');
-    dragPosition.value = null;
     return;
   }
 
@@ -203,20 +232,17 @@ const handleDrop = (event: DragEvent) => {
   const moveData = {
     sourceId,
     targetId: props.folder.id,
-    position: dragPosition.value,
+    position: props.globalDragState.dragPosition,
     sourceIndex: findFolderIndex(sourceId),
     targetIndex: findFolderIndex(props.folder.id)
   };
 
   console.log('执行文件夹移动:', moveData);
   emit('move', moveData);
-
-  // 清理状态
-  dragPosition.value = null;
 };
 
 // 辅助函数
-const updateDragPosition = (event: DragEvent) => {
+const calculateDragPosition = (event: DragEvent): 'before' | 'after' | 'inside' => {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   const mouseY = event.clientY;
   const elementHeight = rect.height;
@@ -227,11 +253,26 @@ const updateDragPosition = (event: DragEvent) => {
   const lowerThreshold = elementHeight * 0.75;
 
   if (relativeY < upperThreshold) {
-    dragPosition.value = 'before';
+    return 'before';
   } else if (relativeY > lowerThreshold) {
-    dragPosition.value = 'after';
+    return 'after';
   } else {
-    dragPosition.value = 'inside';
+    return 'inside';
+  }
+};
+
+const getDropIndicatorClass = (): string => {
+  if (!isCurrentDropTarget.value) return '';
+
+  switch (props.globalDragState.dragPosition) {
+    case 'before':
+      return 'insert-before';
+    case 'after':
+      return 'insert-after';
+    case 'inside':
+      return 'drag-over';
+    default:
+      return '';
   }
 };
 

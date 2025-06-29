@@ -35,9 +35,14 @@
           :selected-folder="selectedFolder"
           :level="0"
           :all-folders="bookmarkFolders"
+          :global-drag-state="globalDragState"
           @select="handleTreeSelect"
           @move="handleFolderMove"
           @reorder="handleReorder"
+          @drag-start="handleGlobalDragStart"
+          @drag-end="handleGlobalDragEnd"
+          @drag-enter="handleGlobalDragEnter"
+          @drag-leave="handleGlobalDragLeave"
         />
       </div>
     </div>
@@ -45,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, provide } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -199,20 +204,25 @@ const handleFolderMove = async (moveData: {
       newParentId = targetFolder.parentId || '1';
 
       // 计算新的索引位置
-      const siblings = props.bookmarkFolders.filter(f => f.parentId === newParentId);
-      const targetSiblingIndex = siblings.findIndex(f => f.id === targetId);
+      // 必须通过 index 排序来确保 siblings 数组的顺序是正确的
+      const siblings = props.bookmarkFolders
+        .filter(f => f.parentId === newParentId)
+        .sort((a, b) => (a.index || 0) - (b.index || 0));
+
+      const targetIndexInSiblings = siblings.findIndex(f => f.id === targetId);
 
       if (position === 'before') {
-        newIndex = targetSiblingIndex;
+        newIndex = targetIndexInSiblings;
       } else {
-        newIndex = targetSiblingIndex + 1;
+        newIndex = targetIndexInSiblings + 1;
       }
 
-      // 如果源文件夹在同一父文件夹中且在目标之前，需要调整索引
+      // 如果源文件夹在同一父文件夹中，需要调整索引
       const sourceFolder = props.bookmarkFolders.find(f => f.id === sourceId);
       if (sourceFolder && sourceFolder.parentId === newParentId) {
-        const sourceSiblingIndex = siblings.findIndex(f => f.id === sourceId);
-        if (sourceSiblingIndex < targetSiblingIndex) {
+        const sourceIndexInSiblings = siblings.findIndex(f => f.id === sourceId);
+        // 当把一个项目往下移动时，它原来的位置会空出来，后面的项目会往前补，所以目标索引需要减 1
+        if (sourceIndexInSiblings !== -1 && sourceIndexInSiblings < targetIndexInSiblings) {
           newIndex--;
         }
       }
@@ -317,6 +327,61 @@ const countTotalItemsInFolder = async (folderId: string): Promise<{folders: numb
   };
 
   return countItems(folderId);
+};
+
+// 全局拖拽状态管理
+interface GlobalDragState {
+  isDragging: boolean;
+  draggedFolderId: string;
+  currentDropTarget: string;
+  dragPosition: 'before' | 'after' | 'inside' | null;
+}
+
+const globalDragState = ref<GlobalDragState>({
+  isDragging: false,
+  draggedFolderId: '',
+  currentDropTarget: '',
+  dragPosition: null
+});
+
+// 全局拖拽事件处理
+const handleGlobalDragStart = (folderId: string) => {
+  console.log('全局拖拽开始:', folderId);
+  globalDragState.value = {
+    isDragging: true,
+    draggedFolderId: folderId,
+    currentDropTarget: '',
+    dragPosition: null
+  };
+};
+
+const handleGlobalDragEnd = () => {
+  console.log('全局拖拽结束');
+  globalDragState.value = {
+    isDragging: false,
+    draggedFolderId: '',
+    currentDropTarget: '',
+    dragPosition: null
+  };
+
+  // 清理所有DOM元素的拖拽状态
+  document.querySelectorAll('.folder-item').forEach(el => {
+    el.classList.remove('drag-over', 'insert-before', 'insert-after');
+  });
+};
+
+const handleGlobalDragEnter = (data: { folderId: string; position: 'before' | 'after' | 'inside' }) => {
+  if (globalDragState.value.isDragging && data.folderId !== globalDragState.value.draggedFolderId) {
+    globalDragState.value.currentDropTarget = data.folderId;
+    globalDragState.value.dragPosition = data.position;
+  }
+};
+
+const handleGlobalDragLeave = (folderId: string) => {
+  if (globalDragState.value.currentDropTarget === folderId) {
+    globalDragState.value.currentDropTarget = '';
+    globalDragState.value.dragPosition = null;
+  }
 };
 </script>
 

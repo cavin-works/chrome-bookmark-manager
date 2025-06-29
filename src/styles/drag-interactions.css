@@ -13,7 +13,7 @@
   }
 
   .draggable-item:hover {
-    @apply transform hover:scale-105 hover:shadow-md hover:z-10;
+    @apply transform hover:shadow-md hover:z-10;
   }
 
   .draggable-item:active {

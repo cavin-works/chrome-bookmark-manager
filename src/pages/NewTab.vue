@@ -42,6 +42,7 @@
                 <div class="flex-1">
                   <BookmarkGrid
                     :filtered-bookmarks="filteredBookmarks"
+                    :bookmark-folders="bookmarkFolders"
                     :search-query="searchQuery"
                     :layout="layout"
                     :loading="loading"
@@ -49,6 +50,7 @@
                     @open-bookmark="openBookmark"
                     @edit-bookmark="editBookmark"
                     @delete-bookmark="deleteBookmark"
+                    @load-more="handleLoadMore"
                   />
                 </div>
               </div>
@@ -98,6 +100,7 @@ import { iconService } from '../services/iconService';
 import { aiService } from '../services/aiService';
 import { storageService } from '../services/storageService';
 import { debounce, getSystemTheme } from '../utils/helpers';
+import { getDefaultIcon as getDefaultIconUtil } from '../utils/defaultIcon';
 
 // 组件导入
 import Header from '../components/Header.vue';
@@ -130,6 +133,11 @@ const settings = ref<UserSettings>({
 
 // Toast
 const { toast } = useToast();
+
+// 获取默认图标URL的工具函数
+const getDefaultIcon = (): string => {
+  return getDefaultIconUtil();
+};
 
 // Stagewise 配置
 const isDev = ref(import.meta.env.DEV);
@@ -326,9 +334,10 @@ const loadBookmarkIcons = async (bookmarkList: Bookmark[]) => {
   console.log('开始后台加载图标...');
 
   // 过滤出需要加载图标的书签（没有图标或使用默认图标的）
+  const defaultIcon = getDefaultIcon();
   const bookmarksNeedingIcons = bookmarkList.filter(bookmark =>
     bookmark.url &&
-    (!bookmark.icon || bookmark.icon === '/icon/default.png')
+    (!bookmark.icon || bookmark.icon === defaultIcon)
   );
 
   if (bookmarksNeedingIcons.length === 0) {
@@ -419,9 +428,10 @@ const loadBookmarksWithoutIcons = async () => {
     console.log('清理后文件夹数量:', cleanedFolders.length);
 
     // 设置默认图标（如果没有图标）
+    const defaultIcon = getDefaultIcon();
     allBookmarks.forEach(bookmark => {
       if (bookmark.url && !bookmark.icon) {
-        bookmark.icon = '/icon/default.png'; // 设置默认图标
+        bookmark.icon = defaultIcon; // 设置默认图标
       }
     });
 
@@ -492,6 +502,13 @@ const loadBookmarks = async () => {
   }
 };
 
+// 处理加载更多
+const handleLoadMore = () => {
+  console.log('触发加载更多事件');
+  // 这里可以添加加载更多的逻辑，比如性能优化、缓存等
+  // 目前BookmarkGrid组件内部已经处理了分页逻辑
+};
+
 // 处理文件夹重新排序（优化：只重新加载数据结构，不重复加载图标）
 const handleFolderReorder = async () => {
   console.log('文件夹已重新排序，重新加载数据...');
@@ -505,9 +522,10 @@ const handleFolderReorder = async () => {
     await loadBookmarksWithoutIcons();
 
     // 恢复图标状态
+    const defaultIcon = getDefaultIcon();
     bookmarks.value.forEach(bookmark => {
       const savedIcon = currentIcons.get(bookmark.id);
-      if (savedIcon && savedIcon !== '/icon/default.png') {
+      if (savedIcon && savedIcon !== defaultIcon) {
         bookmark.icon = savedIcon;
       }
     });
@@ -609,9 +627,10 @@ onMounted(async () => {
       // 恢复已加载的图标，并为新书签加载图标
       const newBookmarks = bookmarks.value.filter(bookmark => !currentIcons.has(bookmark.id));
 
+      const defaultIcon = getDefaultIcon();
       bookmarks.value.forEach(bookmark => {
         const savedIcon = currentIcons.get(bookmark.id);
-        if (savedIcon && savedIcon !== '/icon/default.png') {
+        if (savedIcon && savedIcon !== defaultIcon) {
           bookmark.icon = savedIcon;
         }
       });
