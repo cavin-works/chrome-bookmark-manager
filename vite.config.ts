@@ -23,22 +23,12 @@ export default defineConfig({
     webExtension({
       manifest: generateManifest,
       watchFilePaths: ["package.json", "manifest.json"],
+      disableAutoLaunch: true,
     }),
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  build: {
-    rollupOptions: {
-      input: {
-        // Chrome 扩展入口
-        popup: path.resolve(__dirname, "src/popup.html"),
-        newtab: path.resolve(__dirname, "src/newtab.html"),
-        // 测试页面入口
-        "test-tree-view": path.resolve(__dirname, "src/test-tree-view.html"),
-      },
     },
   },
 });

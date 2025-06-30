@@ -31,27 +31,66 @@
           <main class="flex-1 overflow-hidden">
             <ScrollArea class="h-full">
               <div class="flex flex-col">
-                <!-- 搜索栏 -->
-                <SearchBar
-                  v-model:search-query="searchQuery"
-                  v-model:layout="layout"
-                  @search-input="onSearchInput"
-                />
+                <!-- 模式切换按钮 -->
+                <div class="p-4 border-b bg-card/50">
+                  <div class="flex items-center gap-4">
+                    <span class="text-sm font-medium">当前模式:</span>
+                    <div class="flex items-center gap-2">
+                      <button
+                        @click="isTestMode = false"
+                        :class="cn(
+                          'px-3 py-1 rounded-md text-sm transition-colors',
+                          !isTestMode
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        )"
+                      >
+                        📚 书签管理
+                      </button>
+                      <button
+                        @click="isTestMode = true"
+                        :class="cn(
+                          'px-3 py-1 rounded-md text-sm transition-colors',
+                          isTestMode
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        )"
+                      >
+                        🌲 TreeView 测试
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-                <!-- 书签内容 -->
-                <div class="flex-1">
-                  <BookmarkGrid
-                    :filtered-bookmarks="filteredBookmarks"
-                    :bookmark-folders="bookmarkFolders"
-                    :search-query="searchQuery"
-                    :layout="layout"
-                    :loading="loading"
-                    @add-bookmark="showAddBookmark = true"
-                    @open-bookmark="openBookmark"
-                    @edit-bookmark="editBookmark"
-                    @delete-bookmark="deleteBookmark"
-                    @load-more="handleLoadMore"
+                <!-- 正常书签模式 -->
+                <div v-if="!isTestMode" class="flex flex-col">
+                  <!-- 搜索栏 -->
+                  <SearchBar
+                    v-model:search-query="searchQuery"
+                    v-model:layout="layout"
+                    @search-input="onSearchInput"
                   />
+
+                  <!-- 书签内容 -->
+                  <div class="flex-1">
+                    <BookmarkGrid
+                      :filtered-bookmarks="filteredBookmarks"
+                      :bookmark-folders="bookmarkFolders"
+                      :search-query="searchQuery"
+                      :layout="layout"
+                      :loading="loading"
+                      @add-bookmark="showAddBookmark = true"
+                      @open-bookmark="openBookmark"
+                      @edit-bookmark="editBookmark"
+                      @delete-bookmark="deleteBookmark"
+                      @load-more="handleLoadMore"
+                    />
+                  </div>
+                </div>
+
+                <!-- TreeView 测试模式 -->
+                <div v-else class="flex-1 p-6">
+                  <TreeViewTest />
                 </div>
               </div>
             </ScrollArea>
@@ -110,6 +149,7 @@ import BookmarkGrid from '../components/BookmarkGrid.vue';
 import AddBookmarkDialog from '../components/AddBookmarkDialog.vue';
 import AddFolderDialog from '../components/AddFolderDialog.vue';
 import SettingsDialog from '../components/SettingsDialog.vue';
+import TreeViewTest from '../TreeViewTest.vue';
 
 // 响应式数据
 const bookmarks = ref<Bookmark[]>([]);
@@ -123,6 +163,7 @@ const theme = ref<'light' | 'dark' | 'auto'>('auto');
 const showAddBookmark = ref(false);
 const showAddFolder = ref(false);
 const showSettings = ref(false);
+const isTestMode = ref(false);
 const settings = ref<UserSettings>({
   theme: 'auto',
   layout: 'grid',
