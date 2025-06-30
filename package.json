@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build"
+    "build": "vue-tsc && vite build",
+    "test:tree-view": "vite --open /src/test-tree-view.html"
   },
   "dependencies": {
     "@radix-icons/vue": "^1.0.0",
