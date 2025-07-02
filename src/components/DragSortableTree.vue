@@ -38,6 +38,9 @@
           :global-drag-state="globalDragState"
           @select="handleTreeSelect"
           @move="handleFolderMove"
+          @move-bookmark="handleBookmarkMove"
+          @rename-folder="handleFolderRename"
+          @delete-folder="handleFolderDelete"
           @reorder="handleReorder"
           @drag-start="handleGlobalDragStart"
           @drag-end="handleGlobalDragEnd"
@@ -281,6 +284,128 @@ const handleFolderMove = async (moveData: {
   }, 300);
 };
 
+// 处理书签移动
+const handleBookmarkMove = async (moveData: {
+  bookmarkId: string;
+  targetFolderId: string;
+  bookmark: BookmarkType;
+}) => {
+  console.log('=== 开始书签移动 ===');
+  console.log('移动数据:', moveData);
+
+  try {
+    const { bookmarkId, targetFolderId, bookmark } = moveData;
+
+    // 调用Chrome书签API移动书签
+    const result = await bookmarkService.moveBookmark(bookmarkId, {
+      parentId: targetFolderId
+    });
+
+    console.log('Chrome API 移动结果:', result);
+
+    toast({
+      title: "移动成功",
+      description: `成功将书签 "${bookmark.title}" 移动到目标文件夹！`,
+    });
+
+    console.log('=== 书签移动完成 ===');
+
+    // 触发数据重新加载
+    setTimeout(() => {
+      console.log('触发数据重新加载');
+      emit('reorder');
+    }, 100);
+
+  } catch (error) {
+    console.error('=== 书签移动失败 ===');
+    console.error('错误详情:', error);
+
+    toast({
+      title: "移动失败",
+      description: "移动书签失败，请重试",
+      variant: "destructive",
+    });
+  }
+};
+
+// 处理文件夹重命名
+const handleFolderRename = async (data: { folderId: string; newName: string }) => {
+  console.log('=== 开始文件夹重命名 ===');
+  console.log('重命名数据:', data);
+
+  try {
+    const { folderId, newName } = data;
+
+    // 调用Chrome书签API重命名文件夹
+    const result = await bookmarkService.updateBookmark(folderId, {
+      title: newName
+    });
+
+    console.log('Chrome API 重命名结果:', result);
+
+    toast({
+      title: "重命名成功",
+      description: `文件夹已重命名为"${newName}"`,
+    });
+
+    console.log('=== 文件夹重命名完成 ===');
+
+    // 触发数据重新加载
+    setTimeout(() => {
+      console.log('触发数据重新加载');
+      emit('reorder');
+    }, 100);
+
+  } catch (error) {
+    console.error('=== 文件夹重命名失败 ===');
+    console.error('错误详情:', error);
+
+    toast({
+      title: "重命名失败",
+      description: "重命名文件夹失败，请重试",
+      variant: "destructive",
+    });
+  }
+};
+
+// 处理文件夹删除
+const handleFolderDelete = async (folderId: string) => {
+  console.log('=== 开始文件夹删除 ===');
+  console.log('删除文件夹ID:', folderId);
+
+  try {
+    // 调用Chrome书签API删除文件夹
+    await bookmarkService.deleteBookmark(folderId);
+
+    console.log('Chrome API 删除成功');
+
+    const deletedFolder = props.bookmarkFolders.find(f => f.id === folderId);
+
+    toast({
+      title: "删除成功",
+      description: `文件夹"${deletedFolder?.title || '未知'}"已删除`,
+    });
+
+    console.log('=== 文件夹删除完成 ===');
+
+    // 触发数据重新加载
+    setTimeout(() => {
+      console.log('触发数据重新加载');
+      emit('reorder');
+    }, 100);
+
+  } catch (error) {
+    console.error('=== 文件夹删除失败 ===');
+    console.error('错误详情:', error);
+
+    toast({
+      title: "删除失败",
+      description: "删除文件夹失败，请重试",
+      variant: "destructive",
+    });
+  }
+};
+
 // 检查是否试图移动到子文件夹
 const checkIfMovingToChild = async (sourceId: string, targetId: string): Promise<boolean> => {
   // 递归检查目标文件夹是否是源文件夹的后代
@@ -335,13 +460,15 @@ interface GlobalDragState {
   draggedFolderId: string;
   currentDropTarget: string;
   dragPosition: 'before' | 'after' | 'inside' | null;
+  isBookmarkDrag: boolean;
 }
 
 const globalDragState = ref<GlobalDragState>({
   isDragging: false,
   draggedFolderId: '',
   currentDropTarget: '',
-  dragPosition: null
+  dragPosition: null,
+  isBookmarkDrag: false
 });
 
 // 全局拖拽事件处理
@@ -351,7 +478,8 @@ const handleGlobalDragStart = (folderId: string) => {
     isDragging: true,
     draggedFolderId: folderId,
     currentDropTarget: '',
-    dragPosition: null
+    dragPosition: null,
+    isBookmarkDrag: false
   };
 };
 
@@ -361,7 +489,8 @@ const handleGlobalDragEnd = () => {
     isDragging: false,
     draggedFolderId: '',
     currentDropTarget: '',
-    dragPosition: null
+    dragPosition: null,
+    isBookmarkDrag: false
   };
 
   // 清理所有DOM元素的拖拽状态

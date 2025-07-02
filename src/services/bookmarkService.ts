@@ -113,17 +113,50 @@ class BookmarkService {
         throw new Error('不在扩展环境中，无法删除书签');
       }
 
+      console.log('=== BookmarkService.deleteBookmark 开始 ===');
+      console.log('删除项目ID:', id);
+
       const bookmark = await browser.bookmarks.get(id);
-      await browser.bookmarks.remove(id);
+      const bookmarkItem = bookmark[0];
+
+      console.log('要删除的项目信息:', bookmarkItem);
+
+      // 判断是文件夹还是书签
+      if (bookmarkItem.url) {
+        // 是书签，使用 remove
+        console.log('删除书签...');
+        await browser.bookmarks.remove(id);
+      } else {
+        // 是文件夹，使用 removeTree 递归删除
+        console.log('删除文件夹（递归）...');
+        await browser.bookmarks.removeTree(id);
+      }
+
+      console.log('删除成功');
 
       // 触发事件
       this.notifyListeners({
         action: 'delete',
-        bookmark: bookmark[0] as Bookmark,
+        bookmark: bookmarkItem as Bookmark,
       });
+
+      console.log('=== BookmarkService.deleteBookmark 完成 ===');
     } catch (error) {
-      console.error('删除书签失败:', error);
-      throw new Error('删除书签失败');
+      console.error('=== BookmarkService.deleteBookmark 失败 ===');
+      console.error('删除详细错误:', error);
+
+      // 提供更友好的错误信息
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          throw new Error('要删除的书签或文件夹不存在');
+        } else if (error.message.includes('non-empty')) {
+          throw new Error('文件夹不为空，无法删除');
+        } else {
+          throw new Error(`删除失败: ${error.message}`);
+        }
+      } else {
+        throw new Error('删除时发生未知错误');
+      }
     }
   }
 

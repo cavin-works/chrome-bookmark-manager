@@ -272,13 +272,13 @@ const categories = computed(() => {
 
 // 分类选项
 const categoryOptions = computed(() => [
-  { label: '自动分类', value: '' },
+  { label: '自动分类', value: 'auto' },
   ...categories.value.map(category => ({ label: category, value: category }))
 ]);
 
 // 文件夹选项（简化版，只支持根目录）
 const folderOptions = computed(() => [
-  { label: '默认位置', value: '' }
+  { label: '默认位置', value: 'default' }
 ]);
 
 // 显示的书签列表
@@ -429,7 +429,7 @@ const addBookmark = async (formData: any) => {
     const bookmarkData = {
       title: formData.title,
       url: formData.url,
-      parentId: formData.parentId || undefined,
+      parentId: (formData.parentId && formData.parentId !== 'default') ? formData.parentId : undefined,
     };
 
     await bookmarkService.createBookmark(bookmarkData);

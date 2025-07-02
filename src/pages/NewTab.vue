@@ -81,6 +81,42 @@
           :settings="settings"
           @confirm="saveSettings"
         />
+
+        <!-- 删除确认对话框 -->
+        <AlertDialog :open="showDeleteConfirm" @update:open="showDeleteConfirm = $event">
+          <AlertDialogContent class="sm:max-w-[425px]">
+            <AlertDialogHeader>
+              <AlertDialogTitle class="flex items-center gap-2 text-destructive">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                确认删除
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                确定要删除书签"<strong>{{ bookmarkToDelete?.title }}</strong>"吗？
+                <br /><br />
+                <span class="text-destructive text-sm">
+                  ⚠️ 此操作无法撤销。
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter class="gap-2">
+              <AlertDialogCancel>
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                @click="confirmDeleteBookmark"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                确认删除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <Toaster />
@@ -95,6 +131,16 @@ import { VuePlugin } from '@stagewise-plugins/vue';
 import { ToastProvider } from '@/components/ui/toast';
 import { Toaster } from '@/components/ui/toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast/use-toast';
 
@@ -127,6 +173,8 @@ const theme = ref<'light' | 'dark' | 'auto'>('auto');
 const showAddBookmark = ref(false);
 const showAddFolder = ref(false);
 const showSettings = ref(false);
+const showDeleteConfirm = ref(false);
+const bookmarkToDelete = ref<Bookmark | null>(null);
 const settings = ref<UserSettings>({
   theme: 'auto',
   layout: 'grid',
@@ -173,13 +221,13 @@ const categories = computed(() => {
 
 // 分类选项
 const categoryOptions = computed(() => [
-  { label: '自动分类', value: '' },
+  { label: '自动分类', value: 'auto' },
   ...categories.value.map(category => ({ label: category, value: category }))
 ]);
 
 // 文件夹选项
 const folderOptions = computed(() => [
-  { label: '默认位置', value: '' },
+  { label: '默认位置', value: 'default' },
   ...bookmarkFolders.value
     .filter(folder => folder.title && folder.title.trim() !== '')
     .map(folder => ({ label: folder.title, value: folder.id }))
@@ -248,23 +296,30 @@ const editBookmark = (bookmark: Bookmark) => {
 };
 
 const deleteBookmark = async (bookmark: Bookmark) => {
-  // 使用简单确认对话框替代 n-dialog
-  if (confirm(`确定要删除书签"${bookmark.title}"吗？`)) {
-    try {
-      await bookmarkService.deleteBookmark(bookmark.id);
-      await loadBookmarks();
-      toast({
-        title: "删除成功",
-        description: "书签已删除",
-      });
-    } catch (error) {
-      console.error('删除书签失败:', error);
-      toast({
-        title: "删除失败",
-        description: "删除书签失败，请重试",
-        variant: "destructive",
-      });
-    }
+  bookmarkToDelete.value = bookmark;
+  showDeleteConfirm.value = true;
+};
+
+const confirmDeleteBookmark = async () => {
+  if (!bookmarkToDelete.value) return;
+
+  try {
+    await bookmarkService.deleteBookmark(bookmarkToDelete.value.id);
+    await loadBookmarks();
+    toast({
+      title: "删除成功",
+      description: "书签已删除",
+    });
+  } catch (error) {
+    console.error('删除书签失败:', error);
+    toast({
+      title: "删除失败",
+      description: "删除书签失败，请重试",
+      variant: "destructive",
+    });
+  } finally {
+    showDeleteConfirm.value = false;
+    bookmarkToDelete.value = null;
   }
 };
 
@@ -273,13 +328,13 @@ const addBookmark = async (formData: any) => {
     const bookmarkData = {
       title: formData.title,
       url: formData.url,
-      parentId: formData.parentId || undefined,
+      parentId: (formData.parentId && formData.parentId !== 'default') ? formData.parentId : undefined,
     };
 
     const bookmark = await bookmarkService.createBookmark(bookmarkData);
 
     // AI自动分类
-    if (settings.value.autoCategorize && !formData.category) {
+    if (settings.value.autoCategorize && (!formData.category || formData.category === 'auto')) {
       try {
         const aiResult = await aiService.categorizeBookmark(bookmark);
         bookmark.category = aiResult.category;
@@ -315,7 +370,7 @@ const addFolder = async (formData: any) => {
   try {
     const folder = await bookmarkService.createFolder(
       formData.title,
-      formData.parentId || undefined
+      (formData.parentId && formData.parentId !== 'default') ? formData.parentId : undefined
     );
 
     await loadBookmarks();
