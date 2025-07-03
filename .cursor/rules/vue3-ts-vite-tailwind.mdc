@@ -1,0 +1,477 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Vue 3.4 + TypeScript + Vite + Tailwind CSS 项目规则
+
+## 项目概述
+这是一个使用 Vue 3.4、TypeScript、Vite 和 Tailwind CSS 构建的 Chrome 浏览器扩展项目。
+
+## 核心配置文件
+
+### 主要配置
+- [vite.config.ts](mdc:vite.config.ts) - Vite 构建配置
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript 主配置
+- [tsconfig.node.json](mdc:tsconfig.node.json) - Node.js 环境的 TypeScript 配置
+- [tailwind.config.js](mdc:tailwind.config.js) - Tailwind CSS 配置
+- [package.json](mdc:package.json) - 项目依赖和脚本配置
+
+### 扩展配置
+- [src/manifest.json](mdc:src/manifest.json) - Chrome 扩展清单文件
+- [src/popup.html](mdc:src/popup.html) - 扩展弹窗页面
+- [src/newtab.html](mdc:src/newtab.html) - 新标签页面
+
+## 开发规范
+
+### Vue 3.4 最佳实践
+1. **组合式 API 优先**: 使用 `<script setup>` 语法，参考 [src/pages/NewTab.vue](mdc:src/pages/NewTab.vue)
+2. **TypeScript 类型安全**: 所有组件都应该使用 TypeScript，参考 [src/utils/types.ts](mdc:src/utils/types.ts)
+3. **响应式数据**: 使用 `ref`、`reactive`、`computed` 等响应式 API
+4. **组件通信**: 使用 `defineEmits` 和 `defineProps` 进行类型安全的组件通信
+
+### 组件组织
+- **页面组件**: 存放在 [src/pages/](mdc:src/pages) 目录
+- **通用组件**: 存放在 [src/components/](mdc:src/components) 目录
+- **UI 组件**: 存放在 [src/components/ui/](mdc:src/components/ui) 目录
+
+### TypeScript 规范
+1. **类型定义**: 所有自定义类型定义在 [src/utils/types.ts](mdc:src/utils/types.ts)
+2. **接口优先**: 使用 interface 而非 type 定义对象类型
+3. **严格模式**: 启用 TypeScript 严格模式检查
+4. **环境类型**: 浏览器扩展相关类型定义在 [src/vite-env.d.ts](mdc:src/vite-env.d.ts)
+
+### 样式规范
+1. **Tailwind CSS**: 使用 Tailwind 工具类，配置文件为 [tailwind.config.js](mdc:tailwind.config.js)
+2. **全局样式**: 存放在 [src/styles/](mdc:src/styles) 目录
+3. **组件样式**: 优先使用 Tailwind 类，复杂样式写在对应的 CSS 文件中
+4. **主题变量**: 使用 CSS 变量进行主题定制
+
+### 服务层组织
+- **书签服务**: [src/services/bookmarkService.ts](mdc:src/services/bookmarkService.ts)
+- **存储服务**: [src/services/storageService.ts](mdc:src/services/storageService.ts)
+- **图标服务**: [src/services/iconService.ts](mdc:src/services/iconService.ts)
+- **AI 服务**: [src/services/aiService.ts](mdc:src/services/aiService.ts)
+
+### 工具函数
+- **通用工具**: [src/lib/utils.ts](mdc:src/lib/utils.ts)
+- **帮助函数**: [src/utils/helpers.ts](mdc:src/utils/helpers.ts)
+- **常量定义**: [src/utils/constants.ts](mdc:src/utils/constants.ts)
+
+## 开发指南
+
+### 新增组件
+1. 创建组件文件，使用 PascalCase 命名
+2. 使用 `<script setup lang="ts">` 语法
+3. 定义 Props 和 Emits 的 TypeScript 类型
+4. 使用 Tailwind CSS 进行样式设计
+
+### 状态管理
+- 使用 Vue 3 的 `provide/inject` 或 Composables 进行状态管理
+- 复杂状态可以创建专门的 Composables
+
+### Composables 规范
+
+#### 文件组织
+- **存放位置**: 在 [src/composables/](mdc:src/composables) 目录下创建 Composables
+- **命名规范**: 使用 `use` 前缀，采用 camelCase 命名 (例: `useBookmarks.ts`)
+- **导出方式**: 使用具名导出，函数名与文件名保持一致
+
+#### 标准 Composable 模板
+```typescript
+// src/composables/useBookmarks.ts
+import { ref, computed, readonly, type Ref } from 'vue'
+import { bookmarkService } from '@/services/bookmarkService'
+import type { BookmarkItem } from '@/utils/types'
+
+interface UseBookmarksReturn {
+  // 状态
+  bookmarks: Readonly<Ref<BookmarkItem[]>>
+  loading: Readonly<Ref<boolean>>
+  error: Readonly<Ref<string | null>>
+
+  // 计算属性
+  bookmarkCount: Readonly<Ref<number>>
+
+  // 方法
+  loadBookmarks: () => Promise<void>
+  addBookmark: (bookmark: Omit<BookmarkItem, 'id'>) => Promise<void>
+  removeBookmark: (id: string) => Promise<void>
+  clearError: () => void
+}
+
+export function useBookmarks(): UseBookmarksReturn {
+  const bookmarks = ref<BookmarkItem[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const bookmarkCount = computed(() => bookmarks.value.length)
+
+  const loadBookmarks = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      bookmarks.value = await bookmarkService.getAll()
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '加载书签失败'
+      console.error('Failed to load bookmarks:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const addBookmark = async (bookmark: Omit<BookmarkItem, 'id'>) => {
+    try {
+      const newBookmark = await bookmarkService.create(bookmark)
+      bookmarks.value.push(newBookmark)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '添加书签失败'
+      throw err
+    }
+  }
+
+  const removeBookmark = async (id: string) => {
+    try {
+      await bookmarkService.delete(id)
+      bookmarks.value = bookmarks.value.filter(b => b.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '删除书签失败'
+      throw err
+    }
+  }
+
+  const clearError = () => {
+    error.value = null
+  }
+
+  return {
+    // 使用 readonly 包装状态，防止外部直接修改
+    bookmarks: readonly(bookmarks),
+    loading: readonly(loading),
+    error: readonly(error),
+    bookmarkCount,
+    loadBookmarks,
+    addBookmark,
+    removeBookmark,
+    clearError
+  }
+}
+```
+
+#### Composable 设计原则
+
+1. **单一职责**: 每个 Composable 只负责一个特定的功能域
+2. **类型安全**: 所有 Composable 都必须有完整的 TypeScript 类型定义
+3. **状态只读**: 通过 `readonly()` 包装暴露的响应式状态，防止外部修改
+4. **错误处理**: 统一的错误处理机制，提供清晰的错误信息
+5. **返回接口**: 定义清晰的返回类型接口，提高可维护性
+
+#### 常用 Composables 模式
+
+##### 1. 数据获取 Composable
+```typescript
+// useAsyncData.ts
+export function useAsyncData<T>(
+  fetchFn: () => Promise<T>,
+  immediate = true
+) {
+  const data = ref<T | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const execute = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      data.value = await fetchFn()
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '请求失败'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  if (immediate) {
+    execute()
+  }
+
+  return {
+    data: readonly(data),
+    loading: readonly(loading),
+    error: readonly(error),
+    execute,
+    refresh: execute
+  }
+}
+```
+
+##### 2. 本地存储 Composable
+```typescript
+// useLocalStorage.ts
+export function useLocalStorage<T>(
+  key: string,
+  defaultValue: T,
+  serializer = JSON
+) {
+  const storedValue = ref<T>(defaultValue)
+
+  // 从本地存储读取初始值
+  const read = () => {
+    try {
+      const item = localStorage.getItem(key)
+      if (item !== null) {
+        storedValue.value = serializer.parse(item)
+      }
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error)
+    }
+  }
+
+  // 写入本地存储
+  const write = () => {
+    try {
+      localStorage.setItem(key, serializer.stringify(storedValue.value))
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error)
+    }
+  }
+
+  // 监听值变化并自动保存
+  watch(storedValue, write, { deep: true })
+
+  // 初始化读取
+  read()
+
+  return storedValue
+}
+```
+
+##### 3. 表单处理 Composable
+```typescript
+// useForm.ts
+export function useForm<T extends Record<string, any>>(
+  initialValues: T,
+  validationRules?: Partial<Record<keyof T, (value: any) => string | null>>
+) {
+  const values = reactive<T>({ ...initialValues })
+  const errors = reactive<Partial<Record<keyof T, string>>>({})
+  const isSubmitting = ref(false)
+
+  const validate = () => {
+    if (!validationRules) return true
+
+    let isValid = true
+    Object.keys(errors).forEach(key => delete errors[key])
+
+    for (const [field, rule] of Object.entries(validationRules)) {
+      const error = rule(values[field])
+      if (error) {
+        errors[field] = error
+        isValid = false
+      }
+    }
+
+    return isValid
+  }
+
+  const handleSubmit = async (onSubmit: (values: T) => Promise<void>) => {
+    if (!validate()) return
+
+    isSubmitting.value = true
+    try {
+      await onSubmit(values)
+    } catch (error) {
+      console.error('Form submission error:', error)
+      throw error
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
+  const resetForm = () => {
+    Object.assign(values, initialValues)
+    Object.keys(errors).forEach(key => delete errors[key])
+  }
+
+  return {
+    values,
+    errors: readonly(errors),
+    isSubmitting: readonly(isSubmitting),
+    validate,
+    handleSubmit,
+    resetForm
+  }
+}
+```
+
+#### Chrome 扩展特定 Composables
+
+##### 存储同步 Composable
+```typescript
+// useChromeStorage.ts
+export function useChromeStorage<T>(
+  key: string,
+  defaultValue: T,
+  area: 'sync' | 'local' = 'sync'
+) {
+  const data = ref<T>(defaultValue)
+  const loading = ref(true)
+
+  const load = async () => {
+    try {
+      const result = await chrome.storage[area].get(key)
+      if (result[key] !== undefined) {
+        data.value = result[key]
+      }
+    } catch (error) {
+      console.error(`Failed to load ${key} from chrome.storage.${area}:`, error)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const save = async (value: T) => {
+    try {
+      await chrome.storage[area].set({ [key]: value })
+      data.value = value
+    } catch (error) {
+      console.error(`Failed to save ${key} to chrome.storage.${area}:`, error)
+      throw error
+    }
+  }
+
+  // 监听存储变化
+  const handleStorageChange = (changes: any, areaName: string) => {
+    if (areaName === area && changes[key]) {
+      data.value = changes[key].newValue
+    }
+  }
+
+  onMounted(() => {
+    load()
+    chrome.storage.onChanged.addListener(handleStorageChange)
+  })
+
+  onUnmounted(() => {
+    chrome.storage.onChanged.removeListener(handleStorageChange)
+  })
+
+  return {
+    data,
+    loading: readonly(loading),
+    save,
+    reload: load
+  }
+}
+```
+
+#### Composable 使用指南
+
+1. **组件中使用**:
+```vue
+<script setup lang="ts">
+import { useBookmarks } from '@/composables/useBookmarks'
+
+const {
+  bookmarks,
+  loading,
+  error,
+  loadBookmarks,
+  addBookmark
+} = useBookmarks()
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadBookmarks()
+})
+</script>
+```
+
+2. **组合多个 Composables**:
+```vue
+<script setup lang="ts">
+import { useBookmarks } from '@/composables/useBookmarks'
+import { useLocalStorage } from '@/composables/useLocalStorage'
+
+const { bookmarks, loadBookmarks } = useBookmarks()
+const viewMode = useLocalStorage('bookmark-view-mode', 'grid')
+
+// 可以组合使用多个 Composables
+</script>
+```
+
+#### 测试 Composables
+```typescript
+// tests/composables/useBookmarks.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useBookmarks } from '@/composables/useBookmarks'
+import { bookmarkService } from '@/services/bookmarkService'
+
+vi.mock('@/services/bookmarkService')
+
+describe('useBookmarks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should load bookmarks successfully', async () => {
+    const mockBookmarks = [
+      { id: '1', title: 'Test', url: 'https://test.com' }
+    ]
+
+    vi.spyOn(bookmarkService, 'getAll').mockResolvedValue(mockBookmarks)
+
+    const { bookmarks, loading, loadBookmarks } = useBookmarks()
+
+    expect(loading.value).toBe(false)
+
+    await loadBookmarks()
+
+    expect(bookmarks.value).toEqual(mockBookmarks)
+    expect(loading.value).toBe(false)
+  })
+})
+```
+
+### 构建部署
+- 使用 `pnpm dev` 开发模式
+- 使用 `pnpm build` 生产构建
+- 构建产物会输出到 `dist/` 目录
+
+### 浏览器扩展特定规则
+1. **后台脚本**: [src/background.ts](mdc:src/background.ts) 处理扩展后台逻辑
+2. **权限管理**: 在 [src/manifest.json](mdc:src/manifest.json) 中声明所需权限
+3. **内容脚本**: 需要时在 manifest 中配置内容脚本
+4. **消息通信**: 使用 Chrome Extension API 进行不同脚本间的通信
+
+## 代码质量
+
+### 命名规范
+- **组件**: PascalCase (例: `BookmarkGrid.vue`)
+- **文件**: camelCase 或 kebab-case
+- **变量/函数**: camelCase
+- **常量**: UPPER_SNAKE_CASE
+- **类型/接口**: PascalCase
+
+### 导入规范
+- 使用绝对路径导入项目内部模块
+- 第三方库导入放在顶部
+- 项目内部导入按层次组织
+
+### 注释规范
+- 复杂逻辑必须添加注释
+- 使用 JSDoc 格式注释函数
+- 组件 Props 和 Emits 添加说明
+
+## 性能优化
+- 使用 `defineAsyncComponent` 进行组件懒加载
+- 合理使用 `v-memo` 优化列表渲染
+- 避免不必要的响应式数据
+- 使用 `shallowRef` 和 `shallowReactive` 优化深层数据结构
+
+## 调试和测试
+- 使用 Vue DevTools 进行组件调试
+- 使用 Chrome DevTools 调试扩展功能
+- 在 Chrome 扩展管理页面加载未打包的扩展进行测试

@@ -1,0 +1,409 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 开发模式和最佳实践
+
+## Vue 3.4 Composition API 模式
+
+### 标准组件模板
+```typescript
+<template>
+  <div class="component-container">
+    <!-- 组件内容 -->
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+
+// Props 定义
+interface Props {
+  title: string
+  items?: any[]
+}
+
+// Emits 定义
+interface Emits {
+  (e: 'update', value: any): void
+  (e: 'delete', id: string): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+// 响应式数据
+const isVisible = ref(false)
+const selectedId = ref<string | null>(null)
+
+// 计算属性
+const filteredItems = computed(() => {
+  return props.items?.filter(item => item.active) || []
+})
+
+// 侦听器
+watch(selectedId, (newId) => {
+  if (newId) {
+    emit('update', newId)
+  }
+})
+
+// 生命周期
+onMounted(() => {
+  // 初始化逻辑
+})
+</script>
+```
+
+### Composables 模式
+参考 [src/utils/helpers.ts](mdc:src/utils/helpers.ts) 创建可复用的组合式函数：
+
+```typescript
+// useBookmarks.ts
+import { ref, computed } from 'vue'
+import { bookmarkService } from '@/services/bookmarkService'
+
+export function useBookmarks() {
+  const bookmarks = ref([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const loadBookmarks = async () => {
+    loading.value = true
+    try {
+      bookmarks.value = await bookmarkService.getAll()
+    } catch (err) {
+      error.value = err.message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    bookmarks,
+    loading,
+    error,
+    loadBookmarks
+  }
+}
+```
+
+## TypeScript 类型定义模式
+
+### 接口继承
+```typescript
+interface BaseItem {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface BookmarkItem extends BaseItem {
+  title: string
+  url: string
+  favicon?: string
+  folderId?: string
+}
+
+interface FolderItem extends BaseItem {
+  name: string
+  parentId?: string
+  children?: (BookmarkItem | FolderItem)[]
+}
+```
+
+### 工具类型使用
+```typescript
+// 从现有类型创建新类型
+type BookmarkCreate = Omit<BookmarkItem, 'id' | 'createdAt' | 'updatedAt'>
+type BookmarkUpdate = Partial<BookmarkCreate>
+
+// 联合类型
+type TreeNode = BookmarkItem | FolderItem
+
+// 泛型约束
+interface ApiResponse<T> {
+  data: T
+  message: string
+  success: boolean
+}
+```
+
+## Chrome 扩展开发模式
+
+### 后台脚本通信
+参考 [src/background.ts](mdc:src/background.ts) 进行消息处理：
+
+```typescript
+// 发送消息
+const sendMessage = async (action: string, data?: any) => {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action, data }, resolve)
+  })
+}
+
+// 接收消息
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  switch (request.action) {
+    case 'getBookmarks':
+      handleGetBookmarks().then(sendResponse)
+      return true // 异步响应
+    default:
+      sendResponse({ error: 'Unknown action' })
+  }
+})
+```
+
+### 存储服务模式
+参考 [src/services/storageService.ts](mdc:src/services/storageService.ts)：
+
+```typescript
+class StorageService {
+  async get<T>(key: string): Promise<T | null> {
+    const result = await chrome.storage.sync.get(key)
+    return result[key] || null
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    await chrome.storage.sync.set({ [key]: value })
+  }
+
+  async remove(key: string): Promise<void> {
+    await chrome.storage.sync.remove(key)
+  }
+}
+```
+
+## UI 组件模式
+
+### 对话框组件
+参考 [src/components/AddBookmarkDialog.vue](mdc:src/components/AddBookmarkDialog.vue)：
+
+```vue
+<template>
+  <Dialog v-model:open="isOpen">
+    <DialogContent class="max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ title }}</DialogTitle>
+      </DialogHeader>
+
+      <form @submit.prevent="onSubmit" class="space-y-4">
+        <div>
+          <Label for="name">名称</Label>
+          <Input
+            id="name"
+            v-model="form.name"
+            required
+            class="mt-1"
+          />
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" @click="onCancel">
+            取消
+          </Button>
+          <Button type="submit" :disabled="loading">
+            {{ loading ? '保存中...' : '保存' }}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+</template>
+```
+
+### 列表组件
+参考 [src/components/BookmarkGrid.vue](mdc:src/components/BookmarkGrid.vue)：
+
+```vue
+<template>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <Card
+      v-for="item in items"
+      :key="item.id"
+      class="cursor-pointer hover:shadow-md transition-shadow"
+      @click="onItemClick(item)"
+    >
+      <CardContent class="p-4">
+        <div class="flex items-center space-x-3">
+          <img
+            :src="item.favicon || defaultIcon"
+            :alt="item.title"
+            class="w-6 h-6 rounded"
+          />
+          <div class="flex-1 min-w-0">
+            <h3 class="font-medium truncate">{{ item.title }}</h3>
+            <p class="text-sm text-gray-500 truncate">{{ item.url }}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+</template>
+```
+
+## 样式和主题模式
+
+### Tailwind CSS 自定义类
+在 [tailwind.config.js](mdc:tailwind.config.js) 中扩展：
+
+```javascript
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'bookmark-primary': '#3b82f6',
+        'bookmark-secondary': '#64748b',
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+      },
+      animation: {
+        'slide-in': 'slideIn 0.3s ease-out',
+        'fade-in': 'fadeIn 0.2s ease-in',
+      }
+    }
+  }
+}
+```
+
+### CSS 变量使用
+在 [src/styles/globals.css](mdc:src/styles/globals.css) 中定义：
+
+```css
+:root {
+  --bookmark-radius: 0.5rem;
+  --bookmark-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --bookmark-hover-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bookmark-card {
+  border-radius: var(--bookmark-radius);
+  box-shadow: var(--bookmark-shadow);
+}
+
+.bookmark-card:hover {
+  box-shadow: var(--bookmark-hover-shadow);
+}
+```
+
+## 错误处理模式
+
+### 全局错误处理
+```typescript
+// 错误处理工具
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public statusCode?: number
+  ) {
+    super(message)
+    this.name = 'AppError'
+  }
+}
+
+// 错误边界组件
+export function useErrorHandler() {
+  const error = ref<AppError | null>(null)
+
+  const handleError = (err: unknown) => {
+    console.error('Application error:', err)
+
+    if (err instanceof AppError) {
+      error.value = err
+    } else {
+      error.value = new AppError('未知错误')
+    }
+  }
+
+  const clearError = () => {
+    error.value = null
+  }
+
+  return {
+    error: readonly(error),
+    handleError,
+    clearError
+  }
+}
+```
+
+### 异步操作错误处理
+```typescript
+const useAsyncOperation = () => {
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const execute = async <T>(operation: () => Promise<T>): Promise<T | null> => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const result = await operation()
+      return result
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '操作失败'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    loading: readonly(loading),
+    error: readonly(error),
+    execute
+  }
+}
+```
+
+## 测试模式
+
+### 组件测试
+```typescript
+// 组件测试示例
+import { mount } from '@vue/test-utils'
+import { describe, it, expect } from 'vitest'
+import BookmarkCard from '@/components/BookmarkCard.vue'
+
+describe('BookmarkCard', () => {
+  it('renders bookmark information correctly', () => {
+    const bookmark = {
+      id: '1',
+      title: 'Test Bookmark',
+      url: 'https://example.com',
+      favicon: 'https://example.com/favicon.ico'
+    }
+
+    const wrapper = mount(BookmarkCard, {
+      props: { bookmark }
+    })
+
+    expect(wrapper.find('h3').text()).toBe('Test Bookmark')
+    expect(wrapper.find('img').attributes('src')).toBe(bookmark.favicon)
+  })
+})
+```
+
+### 服务测试
+```typescript
+// 服务测试示例
+import { describe, it, expect, vi } from 'vitest'
+import { bookmarkService } from '@/services/bookmarkService'
+
+describe('BookmarkService', () => {
+  it('should fetch bookmarks successfully', async () => {
+    const mockBookmarks = [
+      { id: '1', title: 'Test', url: 'https://test.com' }
+    ]
+
+    vi.spyOn(chrome.bookmarks, 'getTree').mockResolvedValue(mockBookmarks)
+
+    const bookmarks = await bookmarkService.getAll()
+    expect(bookmarks).toEqual(mockBookmarks)
+  })
+})
+```
