@@ -11,6 +11,7 @@
           :current-theme="theme"
           @toggle-theme="toggleTheme"
           @show-settings="showSettings = true"
+          @add-bookmark="showAddBookmark = true"
         />
 
         <!-- 主内容 -->
@@ -63,11 +64,12 @@
         </div>
 
         <!-- 对话框组件 -->
-        <AddBookmarkDialog
+        <BookmarkFormDialog
           v-model:show="showAddBookmark"
           :category-options="categoryOptions"
           :folder-options="folderOptions"
-          @confirm="addBookmark"
+          :editing-bookmark="editingBookmark"
+          @confirm="handleBookmarkSubmit"
         />
 
         <AddFolderDialog
@@ -157,7 +159,7 @@ import Header from '../components/Header.vue';
 import Sidebar from '../components/Sidebar.vue';
 import SearchBar from '../components/SearchBar.vue';
 import BookmarkGrid from '../components/BookmarkGrid.vue';
-import AddBookmarkDialog from '../components/AddBookmarkDialog.vue';
+import BookmarkFormDialog from '../components/BookmarkFormDialog.vue';
 import AddFolderDialog from '../components/AddFolderDialog.vue';
 import SettingsDialog from '../components/SettingsDialog.vue';
 
@@ -175,6 +177,7 @@ const showAddFolder = ref(false);
 const showSettings = ref(false);
 const showDeleteConfirm = ref(false);
 const bookmarkToDelete = ref<Bookmark | null>(null);
+const editingBookmark = ref<any>(null);
 const settings = ref<UserSettings>({
   theme: 'auto',
   layout: 'grid',
@@ -288,11 +291,14 @@ const openBookmark = (bookmark: Bookmark) => {
 };
 
 const editBookmark = (bookmark: Bookmark) => {
-  // TODO: 实现编辑功能
-  toast({
-    title: "提示",
-    description: "编辑功能开发中...",
-  });
+  editingBookmark.value = {
+    title: bookmark.title,
+    url: bookmark.url,
+    description: bookmark.description || '',
+    category: bookmark.category || '',
+    parentId: bookmark.parentId || ''
+  };
+  showAddBookmark.value = true;
 };
 
 const deleteBookmark = async (bookmark: Bookmark) => {
@@ -321,6 +327,15 @@ const confirmDeleteBookmark = async () => {
     showDeleteConfirm.value = false;
     bookmarkToDelete.value = null;
   }
+};
+
+const handleBookmarkSubmit = async (formData: any) => {
+  if (editingBookmark.value) {
+    await updateBookmark(formData);
+  } else {
+    await addBookmark(formData);
+  }
+  editingBookmark.value = null;
 };
 
 const addBookmark = async (formData: any) => {
@@ -361,6 +376,38 @@ const addBookmark = async (formData: any) => {
     toast({
       title: "添加失败",
       description: "添加书签失败，请重试",
+      variant: "destructive",
+    });
+  }
+};
+
+const updateBookmark = async (formData: any) => {
+  try {
+    const bookmarkData = {
+      title: formData.title,
+      url: formData.url,
+      parentId: (formData.parentId && formData.parentId !== 'default') ? formData.parentId : undefined,
+    };
+
+    // 找到要编辑的书签ID
+    const originalBookmark = bookmarks.value.find(b => 
+      b.title === editingBookmark.value.title && 
+      b.url === editingBookmark.value.url
+    );
+    
+    if (originalBookmark) {
+      await bookmarkService.updateBookmark(originalBookmark.id, bookmarkData);
+      await loadBookmarks();
+      toast({
+        title: "更新成功",
+        description: "书签已更新",
+      });
+    }
+  } catch (error) {
+    console.error('更新书签失败:', error);
+    toast({
+      title: "更新失败",
+      description: "更新书签失败，请重试",
       variant: "destructive",
     });
   }

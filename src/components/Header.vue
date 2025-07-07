@@ -6,6 +6,15 @@
         <Button
           variant="ghost"
           size="sm"
+          @click="$emit('add-bookmark')"
+          title="添加书签"
+          class="hover-glow transition-smooth"
+        >
+          <Plus class="h-4 w-4 icon-theme-transition" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           @click="handleThemeToggle"
           :title="currentTheme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
           :class="cn('theme-toggle-feedback transition-smooth', {
@@ -30,6 +39,31 @@
         >
           <Settings class="h-4 w-4 icon-theme-transition" />
         </Button>
+        <Select>
+    <SelectTrigger class="w-[180px]">
+      <SelectValue placeholder="Select a fruit" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectGroup>
+        <SelectLabel>Fruits</SelectLabel>
+        <SelectItem value="apple">
+          Apple
+        </SelectItem>
+        <SelectItem value="banana">
+          Banana
+        </SelectItem>
+        <SelectItem value="blueberry">
+          Blueberry
+        </SelectItem>
+        <SelectItem value="grapes">
+          Grapes
+        </SelectItem>
+        <SelectItem value="pineapple">
+          Pineapple
+        </SelectItem>
+      </SelectGroup>
+    </SelectContent>
+  </Select>
       </div>
     </div>
   </header>
@@ -37,8 +71,9 @@
 
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
-import { Settings, Sun, Moon } from 'lucide-vue-next';
+import { Settings, Sun, Moon, Plus } from 'lucide-vue-next';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Props {
   title?: string;
@@ -53,6 +88,7 @@ withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'toggle-theme': [];
   'show-settings': [];
+  'add-bookmark': [];
 }>();
 
 const handleThemeToggle = () => {
