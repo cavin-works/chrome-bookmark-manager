@@ -1,85 +1,90 @@
 <template>
   <Dialog :open="show" @update:open="$emit('update:show', $event)">
-    <DialogContent class="sm:max-w-[425px]">
-      <DialogHeader>
+    <DialogContent class="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+      <DialogHeader class="flex-shrink-0">
         <DialogTitle>{{ isEditing ? '编辑书签' : '添加书签' }}</DialogTitle>
         <DialogDescription>
           {{ isEditing ? '编辑书签信息' : '创建一个新的书签，填写相关信息。' }}
         </DialogDescription>
       </DialogHeader>
 
-      <div class="grid gap-4 py-4">
-        <div class="grid gap-2">
-          <label for="title" class="text-sm font-medium">
-            标题 <span class="text-destructive">*</span>
-          </label>
-          <Input
-            id="title"
-            v-model="formData.title"
-            placeholder="书签标题"
-          />
-        </div>
+      <div class="flex-1 overflow-y-auto">
+        <div class="grid gap-4 py-4">
+          <div class="grid gap-2">
+            <label for="title" class="text-sm font-medium">
+              标题 <span class="text-destructive">*</span>
+            </label>
+            <Input
+              id="title"
+              v-model="formData.title"
+              placeholder="书签标题"
+              class="w-full"
+            />
+          </div>
 
-        <div class="grid gap-2">
-          <label for="url" class="text-sm font-medium">
-            URL <span class="text-destructive">*</span>
-          </label>
-          <Input
-            id="url"
-            v-model="formData.url"
-            placeholder="https://example.com"
-            type="url"
-          />
-        </div>
+          <div class="grid gap-2">
+            <label for="url" class="text-sm font-medium">
+              URL <span class="text-destructive">*</span>
+            </label>
+            <Input
+              id="url"
+              v-model="formData.url"
+              placeholder="https://example.com"
+              type="url"
+              class="w-full"
+            />
+          </div>
 
-        <div class="grid gap-2">
-          <label for="description" class="text-sm font-medium">描述</label>
-          <Textarea
-            id="description"
-            v-model="formData.description"
-            placeholder="书签描述（可选）"
-            rows="3"
-          />
-        </div>
+          <div class="grid gap-2">
+            <label for="description" class="text-sm font-medium">描述</label>
+            <Textarea
+              id="description"
+              v-model="formData.description"
+              placeholder="书签描述（可选）"
+              rows="2"
+              class="w-full resize-none"
+            />
+          </div>
 
-        <div class="grid gap-2">
-          <label for="category" class="text-sm font-medium">分类</label>
-          <Select v-model="formData.category">
-            <SelectTrigger>
-              <SelectValue placeholder="自动分类" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="option in categoryOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div class="grid gap-2">
+            <label for="category" class="text-sm font-medium">分类</label>
+            <Select v-model="formData.category">
+              <SelectTrigger class="w-full">
+                <SelectValue placeholder="自动分类" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="option in categoryOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div class="grid gap-2">
-          <label for="folder" class="text-sm font-medium">文件夹</label>
-          <Select v-model="formData.parentId">
-            <SelectTrigger>
-              <SelectValue placeholder="默认位置" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="option in folderOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <div class="grid gap-2">
+            <label for="folder" class="text-sm font-medium">文件夹</label>
+            <Select v-model="formData.parentId">
+              <SelectTrigger class="w-full">
+                <SelectValue placeholder="默认位置" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="option in folderOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <DialogFooter>
+      <DialogFooter class="flex-shrink-0">
         <Button variant="outline" @click="handleCancel">
           取消
         </Button>
@@ -92,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, withDefaults } from 'vue';
 import {
   Dialog,
   DialogContent,

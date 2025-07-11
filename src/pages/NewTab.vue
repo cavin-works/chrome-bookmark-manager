@@ -6,11 +6,10 @@
     <!-- Toast Provider -->
     <ToastProvider>
       <div class="flex h-screen flex-col">
-        <!-- 头部 -->
-        <Header
-          :current-theme="theme"
+        <!-- 导航栏 -->
+        <AppNavigation
+          :theme="theme"
           @toggle-theme="toggleTheme"
-          @show-settings="showSettings = true"
           @add-bookmark="showAddBookmark = true"
         />
 
@@ -31,34 +30,18 @@
           <!-- 内容区域 -->
           <main class="flex-1 overflow-hidden">
             <ScrollArea class="h-full">
-              <div class="flex flex-col">
-
-                <!-- 正常书签模式 -->
-                <div class="flex flex-col">
-                  <!-- 搜索栏 -->
-                  <SearchBar
-                    v-model:search-query="searchQuery"
-                    v-model:layout="layout"
-                    @search-input="onSearchInput"
-                  />
-
-                  <!-- 书签内容 -->
-                  <div class="flex-1">
-                    <BookmarkGrid
-                      :filtered-bookmarks="filteredBookmarks"
-                      :bookmark-folders="bookmarkFolders"
-                      :search-query="searchQuery"
-                      :layout="layout"
-                      :loading="loading"
-                      @add-bookmark="showAddBookmark = true"
-                      @open-bookmark="openBookmark"
-                      @edit-bookmark="editBookmark"
-                      @delete-bookmark="deleteBookmark"
-                      @load-more="handleLoadMore"
-                    />
-                  </div>
-                </div>
-              </div>
+              <!-- 路由视图 -->
+              <RouterView
+                :bookmarks="bookmarks"
+                :bookmark-folders="bookmarkFolders"
+                :selected-folder="selectedFolder"
+                :loading="loading"
+                @add-bookmark="showAddBookmark = true"
+                @open-bookmark="openBookmark"
+                @edit-bookmark="editBookmark"
+                @delete-bookmark="deleteBookmark"
+                @load-more="handleLoadMore"
+              />
             </ScrollArea>
           </main>
         </div>
@@ -155,10 +138,8 @@ import { debounce, getSystemTheme } from '../utils/helpers';
 import { getDefaultIcon as getDefaultIconUtil } from '../utils/defaultIcon';
 
 // 组件导入
-import Header from '../components/Header.vue';
+import AppNavigation from '../components/AppNavigation.vue';
 import Sidebar from '../components/Sidebar.vue';
-import SearchBar from '../components/SearchBar.vue';
-import BookmarkGrid from '../components/BookmarkGrid.vue';
 import BookmarkFormDialog from '../components/BookmarkFormDialog.vue';
 import AddFolderDialog from '../components/AddFolderDialog.vue';
 import SettingsDialog from '../components/SettingsDialog.vue';
@@ -167,10 +148,8 @@ import SettingsDialog from '../components/SettingsDialog.vue';
 const bookmarks = ref<Bookmark[]>([]);
 const bookmarkFolders = ref<Bookmark[]>([]);
 const loading = ref(true);
-const searchQuery = ref('');
 const selectedFolder = ref('');
 const sidebarCollapsed = ref(false);
-const layout = ref<'grid' | 'list'>('grid');
 const theme = ref<'light' | 'dark' | 'auto'>('auto');
 const showAddBookmark = ref(false);
 const showAddFolder = ref(false);
@@ -236,47 +215,11 @@ const folderOptions = computed(() => [
     .map(folder => ({ label: folder.title, value: folder.id }))
 ]);
 
-const filteredBookmarks = computed(() => {
-  let filtered = bookmarks.value;
-
-  // 按文件夹过滤
-  if (selectedFolder.value) {
-    filtered = filtered.filter(bookmark => bookmark.parentId === selectedFolder.value);
-  }
-
-  // 按搜索词过滤
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase().trim();
-
-    // 支持多关键词搜索（空格分隔）
-    const keywords = query.split(/\s+/).filter(keyword => keyword.length > 0);
-
-    filtered = filtered.filter(bookmark => {
-      // 构建搜索文本
-      const searchableText = [
-        bookmark.title || '',
-        bookmark.url || '',
-        bookmark.description || '',
-        bookmark.category || '',
-        ...(bookmark.tags || [])
-      ].join(' ').toLowerCase();
-
-      // 检查是否包含所有关键词（AND 搜索）
-      return keywords.every(keyword => searchableText.includes(keyword));
-    });
-  }
-
-  return filtered;
-});
 
 // 方法
 const selectFolder = (folderId: string) => {
   selectedFolder.value = folderId;
 };
-
-const onSearchInput = debounce(() => {
-  // 搜索逻辑已通过计算属性实现
-}, 300);
 
 const toggleTheme = () => {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
@@ -656,7 +599,6 @@ const loadSettings = async () => {
     const savedSettings = await storageService.getSettings();
     settings.value = savedSettings;
     theme.value = savedSettings.theme;
-    layout.value = savedSettings.layout;
 
     // 设置AI服务API密钥
     if (savedSettings.aiApiKey) {
@@ -682,7 +624,6 @@ const saveSettings = async (newSettings: UserSettings) => {
     settings.value = { ...newSettings };
     await storageService.saveSettings(settings.value);
     theme.value = settings.value.theme;
-    layout.value = settings.value.layout;
 
     if (settings.value.aiApiKey) {
       aiService.setApiKey(settings.value.aiApiKey);
@@ -702,10 +643,6 @@ const saveSettings = async (newSettings: UserSettings) => {
   }
 };
 
-// 监听器
-watch(() => settings.value.layout, (newLayout) => {
-  layout.value = newLayout;
-});
 
 // 生命周期
 onMounted(async () => {

@@ -1,6 +1,6 @@
 <template>
   <Dialog :open="show" @update:open="$emit('update:show', $event)">
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-[450px]">
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
           <FolderPlus class="h-5 w-5" />
@@ -20,13 +20,14 @@
             id="title"
             v-model="formData.title"
             placeholder="文件夹名称"
+            class="w-full"
           />
         </div>
 
         <div class="grid gap-2">
           <label for="parent" class="text-sm font-medium">父文件夹</label>
           <Select v-model="formData.parentId">
-            <SelectTrigger>
+            <SelectTrigger class="w-full">
               <SelectValue placeholder="根目录" />
             </SelectTrigger>
             <SelectContent>
