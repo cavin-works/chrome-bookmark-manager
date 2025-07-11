@@ -1,0 +1,223 @@
+---
+description: 当需要设计服务层架构时应用此规则。适用于以下场景：(1) 创建新的服务类；(2) 重构业务逻辑到服务层；(3) 实现API调用和数据处理；(4) 设计服务间的依赖关系。该规则确保服务层具有清晰的职责分离，良好的可测试性和可维护性。
+globs:
+alwaysApply: false
+---
+
+# 服务层架构模式
+
+## 关键规则
+
+- 每个服务类负责单一的业务领域，遵循单一职责原则
+- 使用类的方式组织服务，提供静态方法和实例方法
+- 所有异步方法使用 `async/await` 语法，提供完整的错误处理
+- 服务间依赖通过依赖注入或服务定位器模式管理
+- 在 `src/services/` 目录下组织服务文件
+- 为每个服务提供清晰的 TypeScript 接口定义
+
+## 示例
+
+<example>
+```typescript
+// src/services/bookmarkService.ts
+import type { BookmarkItem, BookmarkCreate, BookmarkUpdate } from '@/utils/types'
+import { storageService } from './storageService'
+
+export class BookmarkService {
+  private static readonly STORAGE_KEY = 'bookmarks'
+
+  async getAll(): Promise<BookmarkItem[]> {
+    try {
+      const bookmarks = await storageService.get<BookmarkItem[]>(
+        BookmarkService.STORAGE_KEY
+      )
+      return bookmarks || []
+    } catch (error) {
+      console.error('Failed to get bookmarks:', error)
+      throw new Error('获取书签失败')
+    }
+  }
+
+  async getById(id: string): Promise<BookmarkItem | null> {
+    try {
+      const bookmarks = await this.getAll()
+      return bookmarks.find(b => b.id === id) || null
+    } catch (error) {
+      console.error('Failed to get bookmark by id:', error)
+      throw new Error('获取书签失败')
+    }
+  }
+
+  async create(bookmark: BookmarkCreate): Promise<BookmarkItem> {
+    try {
+      const bookmarks = await this.getAll()
+      const newBookmark: BookmarkItem = {
+        ...bookmark,
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      bookmarks.push(newBookmark)
+      await storageService.set(BookmarkService.STORAGE_KEY, bookmarks)
+
+      return newBookmark
+    } catch (error) {
+      console.error('Failed to create bookmark:', error)
+      throw new Error('创建书签失败')
+    }
+  }
+
+  async update(id: string, updates: BookmarkUpdate): Promise<BookmarkItem> {
+    try {
+      const bookmarks = await this.getAll()
+      const index = bookmarks.findIndex(b => b.id === id)
+
+      if (index === -1) {
+        throw new Error('书签不存在')
+      }
+
+      const updatedBookmark = {
+        ...bookmarks[index],
+        ...updates,
+        updatedAt: new Date()
+      }
+
+      bookmarks[index] = updatedBookmark
+      await storageService.set(BookmarkService.STORAGE_KEY, bookmarks)
+
+      return updatedBookmark
+    } catch (error) {
+      console.error('Failed to update bookmark:', error)
+      throw new Error('更新书签失败')
+    }
+  }
+
+  async delete(id: string): Promise<void> {
+    try {
+      const bookmarks = await this.getAll()
+      const filteredBookmarks = bookmarks.filter(b => b.id !== id)
+
+      await storageService.set(BookmarkService.STORAGE_KEY, filteredBookmarks)
+    } catch (error) {
+      console.error('Failed to delete bookmark:', error)
+      throw new Error('删除书签失败')
+    }
+  }
+
+  async search(query: string): Promise<BookmarkItem[]> {
+    try {
+      const bookmarks = await this.getAll()
+      const lowerQuery = query.toLowerCase()
+
+      return bookmarks.filter(bookmark =>
+        bookmark.title.toLowerCase().includes(lowerQuery) ||
+        bookmark.url.toLowerCase().includes(lowerQuery)
+      )
+    } catch (error) {
+      console.error('Failed to search bookmarks:', error)
+      throw new Error('搜索书签失败')
+    }
+  }
+}
+
+// 导出单例实例
+export const bookmarkService = new BookmarkService()
+```
+
+```typescript
+// src/services/storageService.ts
+export class StorageService {
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const result = await chrome.storage.sync.get(key)
+      return result[key] || null
+    } catch (error) {
+      console.error(`Failed to get storage key ${key}:`, error)
+      return null
+    }
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    try {
+      await chrome.storage.sync.set({ [key]: value })
+    } catch (error) {
+      console.error(`Failed to set storage key ${key}:`, error)
+      throw error
+    }
+  }
+
+  async remove(key: string): Promise<void> {
+    try {
+      await chrome.storage.sync.remove(key)
+    } catch (error) {
+      console.error(`Failed to remove storage key ${key}:`, error)
+      throw error
+    }
+  }
+
+  async clear(): Promise<void> {
+    try {
+      await chrome.storage.sync.clear()
+    } catch (error) {
+      console.error('Failed to clear storage:', error)
+      throw error
+    }
+  }
+}
+
+export const storageService = new StorageService()
+```
+</example>
+
+<example type="invalid">
+```typescript
+// 错误：直接在组件中处理业务逻辑
+const BookmarkList = () => {
+  const bookmarks = ref([])
+
+  const loadBookmarks = async () => {
+    // 错误：业务逻辑在组件中
+    const result = await chrome.storage.sync.get('bookmarks')
+    bookmarks.value = result.bookmarks || []
+  }
+
+  const addBookmark = async (bookmark) => {
+    // 错误：没有类型检查
+    const newBookmark = {
+      ...bookmark,
+      id: Math.random().toString(),
+      createdAt: Date.now()
+    }
+    bookmarks.value.push(newBookmark)
+    await chrome.storage.sync.set({ bookmarks: bookmarks.value })
+  }
+}
+
+// 错误：没有错误处理
+const getBookmarks = async () => {
+  const result = await chrome.storage.sync.get('bookmarks')
+  return result.bookmarks
+}
+
+// 错误：没有统一的服务接口
+const bookmarkAPI = {
+  async get() {
+    return await fetch('/api/bookmarks')
+  },
+  async create(bookmark) {
+    return await fetch('/api/bookmarks', {
+      method: 'POST',
+      body: JSON.stringify(bookmark)
+    })
+  }
+}
+
+// 错误：混合了不同的职责
+class BookmarkAndUserService {
+  async getBookmarks() { /* ... */ }
+  async getUserProfile() { /* ... */ }
+  async updateSettings() { /* ... */ }
+}
+```
+</example>

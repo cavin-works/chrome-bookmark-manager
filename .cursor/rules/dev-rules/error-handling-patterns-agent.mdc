@@ -1,0 +1,156 @@
+---
+description: 当需要处理错误或异常情况时应用此规则。适用于以下场景：(1) 实现全局错误处理；(2) 处理异步操作错误；(3) 创建错误边界组件；(4) 设计用户友好的错误提示。该规则确保应用具有健壮的错误处理机制，提供清晰的错误信息和恢复策略。
+globs:
+alwaysApply: false
+---
+
+# 错误处理模式
+
+## 关键规则
+
+- 使用自定义错误类继承 `Error`，提供错误代码和状态码
+- 实现全局错误处理器，统一处理不同类型的错误
+- 异步操作必须包含 `try-catch` 错误处理
+- 提供用户友好的错误消息，避免暴露技术细节
+- 使用 `readonly` 封装错误状态，防止外部直接修改
+- 实现错误恢复机制，允许用户重试或清除错误
+
+## 示例
+
+<example>
+```typescript
+// 自定义错误类
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public statusCode?: number
+  ) {
+    super(message)
+    this.name = 'AppError'
+  }
+}
+
+// 全局错误处理
+export function useErrorHandler() {
+  const error = ref<AppError | null>(null)
+
+  const handleError = (err: unknown) => {
+    console.error('Application error:', err)
+
+    if (err instanceof AppError) {
+      error.value = err
+    } else if (err instanceof Error) {
+      error.value = new AppError(err.message)
+    } else {
+      error.value = new AppError('未知错误')
+    }
+  }
+
+  const clearError = () => {
+    error.value = null
+  }
+
+  return {
+    error: readonly(error),
+    handleError,
+    clearError
+  }
+}
+
+// 异步操作错误处理
+export function useAsyncOperation() {
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const execute = async <T>(operation: () => Promise<T>): Promise<T | null> => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const result = await operation()
+      return result
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '操作失败'
+      console.error('Async operation failed:', err)
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const retry = async <T>(operation: () => Promise<T>): Promise<T | null> => {
+    return execute(operation)
+  }
+
+  return {
+    loading: readonly(loading),
+    error: readonly(error),
+    execute,
+    retry
+  }
+}
+
+// 组件中使用
+const { error, handleError, clearError } = useErrorHandler()
+const { loading, execute } = useAsyncOperation()
+
+const loadData = async () => {
+  const result = await execute(async () => {
+    const response = await fetch('/api/data')
+    if (!response.ok) {
+      throw new AppError(`请求失败: ${response.statusText}`, 'API_ERROR', response.status)
+    }
+    return response.json()
+  })
+
+  if (result) {
+    // 处理成功结果
+  }
+}
+```
+</example>
+
+<example type="invalid">
+```typescript
+// 错误：没有错误处理
+const loadData = async () => {
+  const response = await fetch('/api/data')
+  const data = await response.json()
+  // 没有检查response.ok
+  return data
+}
+
+// 错误：暴露技术细节
+const handleError = (err: Error) => {
+  alert(err.stack) // 向用户暴露技术细节
+}
+
+// 错误：没有错误恢复
+const submitForm = async () => {
+  try {
+    await api.submit(formData)
+  } catch (error) {
+    console.error(error)
+    // 没有提供重试机制
+  }
+}
+
+// 错误：使用通用错误类型
+const error = ref<any>(null)
+
+const handleError = (err: any) => {
+  error.value = err // 直接赋值，没有规范化
+}
+
+// 错误：没有错误清除机制
+const loadBookmarks = async () => {
+  try {
+    bookmarks.value = await bookmarkService.getAll()
+  } catch (err) {
+    error.value = err.message
+    // 错误状态永远不会被清除
+  }
+}
+```
+</example>

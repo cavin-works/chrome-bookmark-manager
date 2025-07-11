@@ -1,0 +1,109 @@
+---
+description: 当需要开发Chrome扩展功能时应用此规则。适用于以下场景：(1) 创建或修改后台脚本；(2) 实现扩展间消息通信；(3) 处理存储和权限管理；(4) 配置manifest文件。该规则确保Chrome扩展开发遵循最佳实践，包括正确的消息传递机制、存储服务封装、权限声明等。
+globs:
+alwaysApply: false
+---
+
+# Chrome 扩展开发模式
+
+## 关键规则
+
+- 使用 `chrome.runtime.sendMessage()` 和 `chrome.runtime.onMessage` 进行消息通信
+- 所有异步Chrome API调用使用 `async/await` 语法
+- 在 `manifest.json` 中正确声明权限和内容脚本
+- 使用服务类封装Chrome API调用，避免直接在组件中使用
+- 实现统一的错误处理机制处理Chrome API异常
+- 使用 `chrome.storage.sync` 进行跨设备数据同步
+
+## 示例
+
+<example>
+```typescript
+// 后台脚本消息处理
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  switch (request.action) {
+    case 'getBookmarks':
+      handleGetBookmarks().then(sendResponse)
+      return true // 异步响应
+    case 'createBookmark':
+      handleCreateBookmark(request.data).then(sendResponse)
+      return true
+    default:
+      sendResponse({ error: 'Unknown action' })
+  }
+})
+
+// 存储服务封装
+class StorageService {
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const result = await chrome.storage.sync.get(key)
+      return result[key] || null
+    } catch (error) {
+      console.error(`Failed to get ${key}:`, error)
+      return null
+    }
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    try {
+      await chrome.storage.sync.set({ [key]: value })
+    } catch (error) {
+      console.error(`Failed to set ${key}:`, error)
+      throw error
+    }
+  }
+}
+
+// 组件中发送消息
+const sendMessage = async (action: string, data?: any) => {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action, data }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Message error:', chrome.runtime.lastError)
+        resolve({ error: chrome.runtime.lastError.message })
+      } else {
+        resolve(response)
+      }
+    })
+  })
+}
+```
+</example>
+
+<example type="invalid">
+```typescript
+// 直接在组件中使用Chrome API
+const bookmarks = ref([])
+
+onMounted(() => {
+  // 错误：直接使用Chrome API
+  chrome.bookmarks.getTree((result) => {
+    bookmarks.value = result
+  })
+})
+
+// 没有错误处理的消息发送
+const sendMessage = (action: string, data?: any) => {
+  chrome.runtime.sendMessage({ action, data }, (response) => {
+    // 没有检查chrome.runtime.lastError
+    console.log(response)
+  })
+}
+
+// 同步API调用
+const getData = () => {
+  chrome.storage.sync.get('key', (result) => {
+    // 使用回调而不是Promise
+    return result.key
+  })
+}
+
+// manifest.json权限不足
+{
+  "permissions": [
+    // 缺少必要的权限声明
+  ]
+}
+```
+</example>

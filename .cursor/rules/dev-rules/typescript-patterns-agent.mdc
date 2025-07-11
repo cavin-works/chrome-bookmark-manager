@@ -1,0 +1,108 @@
+---
+description: 当需要定义类型、接口或处理TypeScript相关代码时应用此规则。适用于以下场景：(1) 创建新的类型定义；(2) 重构现有代码以提高类型安全性；(3) 设计接口继承和泛型；(4) 处理复杂的类型操作。该规则确保TypeScript代码具有良好的类型安全性、可维护性和可扩展性。
+globs:
+alwaysApply: false
+---
+
+# TypeScript 类型定义模式
+
+## 关键规则
+
+- 优先使用 `interface` 定义对象类型，使用 `type` 定义联合类型和工具类型
+- 使用接口继承构建类型层级关系，避免重复定义
+- 合理使用泛型约束和工具类型如 `Omit`、`Pick`、`Partial`
+- 为函数参数和返回值提供明确的类型注解
+- 使用联合类型和字面量类型增强类型安全性
+- 在 `src/utils/types.ts` 中集中管理项目类型定义
+
+## 示例
+
+<example>
+```typescript
+// 基础接口定义
+interface BaseItem {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+// 接口继承
+interface BookmarkItem extends BaseItem {
+  title: string
+  url: string
+  favicon?: string
+  folderId?: string
+}
+
+interface FolderItem extends BaseItem {
+  name: string
+  parentId?: string
+  children?: TreeNode[]
+}
+
+// 联合类型
+type TreeNode = BookmarkItem | FolderItem
+
+// 工具类型使用
+type BookmarkCreate = Omit<BookmarkItem, 'id' | 'createdAt' | 'updatedAt'>
+type BookmarkUpdate = Partial<BookmarkCreate>
+
+// 泛型接口
+interface ApiResponse<T> {
+  data: T
+  message: string
+  success: boolean
+}
+
+// 类型守卫
+function isBookmarkItem(item: TreeNode): item is BookmarkItem {
+  return 'url' in item
+}
+
+// 泛型函数
+async function fetchData<T>(url: string): Promise<ApiResponse<T>> {
+  const response = await fetch(url)
+  return response.json()
+}
+```
+</example>
+
+<example type="invalid">
+```typescript
+// 使用any类型
+let userData: any = {
+  name: 'John',
+  age: 30
+}
+
+// 没有类型定义的函数
+function processBookmark(bookmark) {
+  return {
+    title: bookmark.title,
+    url: bookmark.url
+  }
+}
+
+// 重复的类型定义
+interface UserCreate {
+  name: string
+  email: string
+  password: string
+}
+
+interface UserUpdate {
+  name: string
+  email: string
+  password: string
+}
+
+// 没有使用联合类型
+function handleItem(item: object) {
+  if (item.hasOwnProperty('url')) {
+    // 处理书签
+  } else {
+    // 处理文件夹
+  }
+}
+```
+</example>

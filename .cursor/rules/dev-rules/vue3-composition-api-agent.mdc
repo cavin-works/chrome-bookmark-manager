@@ -1,0 +1,105 @@
+---
+description: 当需要创建或修改Vue 3.4组件时应用此规则。适用于以下场景：(1) 创建新的Vue组件；(2) 重构现有组件为Composition API；(3) 优化组件的响应式数据和计算属性；(4) 实现组件间通信。该规则确保组件使用Vue 3.4的最佳实践，包括script setup语法、TypeScript类型安全、响应式API正确使用等。
+globs:
+alwaysApply: false
+---
+
+# Vue 3.4 Composition API 开发模式
+
+## 关键规则
+
+- 始终使用 `<script setup lang="ts">` 语法而非 Options API
+- 使用 `defineProps<Props>()` 和 `defineEmits<Emits>()` 进行类型安全的组件通信
+- 优先使用 `ref()` 处理基本类型，`reactive()` 处理对象类型
+- 使用 `computed()` 创建计算属性，避免在模板中使用复杂表达式
+- 使用 `watch()` 或 `watchEffect()` 进行副作用处理
+- 组件生命周期使用 `onMounted()`、`onUnmounted()` 等组合式API
+
+## 示例
+
+<example>
+```vue
+<template>
+  <div class="user-profile">
+    <h2>{{ user.name }}</h2>
+    <p>{{ userInfo }}</p>
+    <button @click="updateUser">更新用户</button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+
+interface Props {
+  userId: string
+}
+
+interface Emits {
+  (e: 'userUpdated', user: User): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const user = ref<User | null>(null)
+const loading = ref(false)
+
+const userInfo = computed(() => {
+  return user.value ? `${user.value.name} - ${user.value.email}` : '加载中...'
+})
+
+const updateUser = async () => {
+  if (!user.value) return
+  loading.value = true
+  try {
+    const updatedUser = await userService.update(user.value)
+    emit('userUpdated', updatedUser)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  user.value = await userService.getById(props.userId)
+})
+</script>
+```
+</example>
+
+<example type="invalid">
+```vue
+<template>
+  <div class="user-profile">
+    <h2>{{ user.name }}</h2>
+    <p>{{ user.name + ' - ' + user.email }}</p>
+    <button @click="updateUser">更新用户</button>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['userId'],
+  data() {
+    return {
+      user: null,
+      loading: false
+    }
+  },
+  methods: {
+    async updateUser() {
+      this.loading = true
+      try {
+        this.user = await userService.update(this.user)
+        this.$emit('userUpdated', this.user)
+      } finally {
+        this.loading = false
+      }
+    }
+  },
+  async mounted() {
+    this.user = await userService.getById(this.userId)
+  }
+}PP
+</script>
+```
+</example>

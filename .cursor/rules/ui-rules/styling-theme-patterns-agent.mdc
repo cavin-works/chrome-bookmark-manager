@@ -1,0 +1,187 @@
+---
+description: 当需要设计样式和主题时应用此规则。适用于以下场景：(1) 配置Tailwind CSS和自定义主题；(2) 创建响应式设计；(3) 实现主题切换功能；(4) 优化样式性能和一致性。该规则确保项目具有统一的设计语言，良好的响应式体验和可维护的样式架构。
+globs:
+alwaysApply: false
+---
+
+# 样式和主题模式
+
+## 关键规则
+
+- 优先使用 Tailwind CSS 工具类，避免编写自定义CSS
+- 在 `tailwind.config.js` 中扩展主题配置，使用设计token
+- 使用 CSS 变量实现主题切换和颜色管理
+- 采用响应式设计原则，支持移动端和桌面端
+- 使用语义化的颜色命名和间距系统
+- 避免在组件中硬编码样式值
+
+## 示例
+
+<example>
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          500: '#3b82f6',
+          600: '#2563eb',
+          900: '#1e3a8a'
+        },
+        bookmark: {
+          primary: 'var(--bookmark-primary)',
+          secondary: 'var(--bookmark-secondary)',
+          accent: 'var(--bookmark-accent)'
+        }
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem'
+      },
+      animation: {
+        'slide-in': 'slideIn 0.3s ease-out',
+        'fade-in': 'fadeIn 0.2s ease-in'
+      }
+    }
+  }
+}
+```
+
+```css
+/* globals.css */
+:root {
+  --bookmark-primary: #3b82f6;
+  --bookmark-secondary: #64748b;
+  --bookmark-accent: #f59e0b;
+  --bookmark-radius: 0.5rem;
+  --bookmark-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --bookmark-primary: #60a5fa;
+  --bookmark-secondary: #94a3b8;
+  --bookmark-accent: #fbbf24;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+```vue
+<template>
+  <div class="bookmark-card">
+    <div class="bookmark-header">
+      <img :src="favicon" class="bookmark-icon" />
+      <h3 class="bookmark-title">{{ title }}</h3>
+    </div>
+    <p class="bookmark-url">{{ url }}</p>
+  </div>
+</template>
+
+<style scoped>
+.bookmark-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  @apply hover:shadow-md transition-shadow duration-200;
+  @apply dark:bg-gray-800 dark:border-gray-700;
+}
+
+.bookmark-header {
+  @apply flex items-center space-x-3 mb-2;
+}
+
+.bookmark-icon {
+  @apply w-6 h-6 rounded flex-shrink-0;
+}
+
+.bookmark-title {
+  @apply font-medium text-gray-900 dark:text-gray-100;
+  @apply truncate;
+}
+
+.bookmark-url {
+  @apply text-sm text-gray-500 dark:text-gray-400;
+  @apply truncate;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .bookmark-card {
+    @apply p-3;
+  }
+
+  .bookmark-title {
+    @apply text-sm;
+  }
+}
+</style>
+```
+</example>
+
+<example type="invalid">
+```vue
+<template>
+  <div class="card">
+    <div class="header">
+      <img :src="favicon" class="icon" />
+      <h3 class="title">{{ title }}</h3>
+    </div>
+    <p class="url">{{ url }}</p>
+  </div>
+</template>
+
+<style scoped>
+/* 错误：使用硬编码值而不是设计token */
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  margin: 8px;
+}
+
+.card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.title {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.url {
+  color: #6b7280;
+  font-size: 14px;
+  /* 错误：没有处理文本截断 */
+}
+
+/* 错误：没有响应式设计 */
+/* 错误：没有暗色主题支持 */
+/* 错误：没有使用CSS变量 */
+</style>
+```
+</example>

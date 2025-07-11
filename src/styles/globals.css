@@ -1,6 +1,5 @@
 /* 导入增强样式系统 - 必须在所有其他语句之前 */
 @import './animations.css';
-@import './theme-transitions.css';
 @import './drag-interactions.css';
 @import './responsive-enhancements.css';
 

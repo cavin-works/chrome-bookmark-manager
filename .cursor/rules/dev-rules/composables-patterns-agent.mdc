@@ -1,0 +1,142 @@
+---
+description: 当需要创建或使用Vue 3 Composables时应用此规则。适用于以下场景：(1) 创建可复用的组合式函数；(2) 抽取组件逻辑到Composables；(3) 实现状态管理和副作用处理；(4) 设计跨组件共享逻辑。该规则确保Composables遵循最佳实践，包括正确的状态封装、类型安全、错误处理等。
+globs:
+alwaysApply: false
+---
+
+# Vue 3 Composables 开发模式
+
+## 关键规则
+
+- 使用 `use` 前缀命名Composables，采用camelCase命名
+- 使用 `readonly()` 包装暴露的响应式状态，防止外部修改
+- 提供清晰的TypeScript类型定义和返回接口
+- 实现统一的错误处理机制，提供清晰的错误信息
+- 遵循单一职责原则，每个Composable只负责一个功能域
+- 在 `src/composables/` 目录下组织Composables文件
+
+## 示例
+
+<example>
+```typescript
+// src/composables/useBookmarks.ts
+import { ref, computed, readonly, type Ref } from 'vue'
+import { bookmarkService } from '@/services/bookmarkService'
+import type { BookmarkItem } from '@/utils/types'
+
+interface UseBookmarksReturn {
+  bookmarks: Readonly<Ref<BookmarkItem[]>>
+  loading: Readonly<Ref<boolean>>
+  error: Readonly<Ref<string | null>>
+  bookmarkCount: Readonly<Ref<number>>
+  loadBookmarks: () => Promise<void>
+  addBookmark: (bookmark: Omit<BookmarkItem, 'id'>) => Promise<void>
+  removeBookmark: (id: string) => Promise<void>
+  clearError: () => void
+}
+
+export function useBookmarks(): UseBookmarksReturn {
+  const bookmarks = ref<BookmarkItem[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const bookmarkCount = computed(() => bookmarks.value.length)
+
+  const loadBookmarks = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      bookmarks.value = await bookmarkService.getAll()
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '加载书签失败'
+      console.error('Failed to load bookmarks:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const addBookmark = async (bookmark: Omit<BookmarkItem, 'id'>) => {
+    try {
+      const newBookmark = await bookmarkService.create(bookmark)
+      bookmarks.value.push(newBookmark)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '添加书签失败'
+      throw err
+    }
+  }
+
+  const removeBookmark = async (id: string) => {
+    try {
+      await bookmarkService.delete(id)
+      bookmarks.value = bookmarks.value.filter(b => b.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '删除书签失败'
+      throw err
+    }
+  }
+
+  const clearError = () => {
+    error.value = null
+  }
+
+  return {
+    bookmarks: readonly(bookmarks),
+    loading: readonly(loading),
+    error: readonly(error),
+    bookmarkCount,
+    loadBookmarks,
+    addBookmark,
+    removeBookmark,
+    clearError
+  }
+}
+```
+</example>
+
+<example type="invalid">
+```typescript
+// 错误：没有使用readonly包装状态
+export function useBookmarks() {
+  const bookmarks = ref<BookmarkItem[]>([])
+  const loading = ref(false)
+
+  return {
+    bookmarks, // 直接暴露，可被外部修改
+    loading
+  }
+}
+
+// 错误：没有类型定义
+export function useBookmarks() {
+  const bookmarks = ref([])
+
+  const loadBookmarks = async () => {
+    // 没有错误处理
+    bookmarks.value = await bookmarkService.getAll()
+  }
+
+  return {
+    bookmarks,
+    loadBookmarks
+  }
+}
+
+// 错误：违反单一职责
+export function useBookmarksAndSettings() {
+  const bookmarks = ref([])
+  const settings = ref({})
+
+  // 混合了两个不同的功能域
+  const loadBookmarks = async () => { /* ... */ }
+  const saveSettings = async () => { /* ... */ }
+
+  return {
+    bookmarks,
+    settings,
+    loadBookmarks,
+    saveSettings
+  }
+}
+```
+</example>

@@ -1,0 +1,197 @@
+---
+description: 当需要创建或修改UI组件时应用此规则。适用于以下场景：(1) 创建新的UI组件；(2) 设计对话框和表单组件；(3) 实现列表和卡片组件；(4) 优化组件的可复用性和可维护性。该规则确保UI组件遵循最佳实践，包括正确的组件结构、Tailwind CSS使用、可访问性等。
+globs:
+alwaysApply: false
+---
+
+# UI 组件开发模式
+
+## 关键规则
+
+- 使用 Tailwind CSS 工具类进行样式设计，避免自定义CSS
+- 对话框组件使用 `Dialog` 系列组件，确保正确的可访问性
+- 表单组件使用 `Form` 系列组件，提供验证和错误处理
+- 列表组件使用响应式网格布局，支持不同屏幕尺寸
+- 组件应具有清晰的 Props 接口和事件定义
+- 使用语义化的HTML元素和ARIA属性
+
+## 示例
+
+<example>
+```vue
+<template>
+  <Dialog v-model:open="isOpen">
+    <DialogContent class="max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ title }}</DialogTitle>
+      </DialogHeader>
+
+      <form @submit.prevent="onSubmit" class="space-y-4">
+        <div>
+          <Label for="name">名称</Label>
+          <Input
+            id="name"
+            v-model="form.name"
+            required
+            class="mt-1"
+            :class="{ 'border-red-500': errors.name }"
+          />
+          <p v-if="errors.name" class="text-red-500 text-sm mt-1">
+            {{ errors.name }}
+          </p>
+        </div>
+
+        <div>
+          <Label for="url">URL</Label>
+          <Input
+            id="url"
+            v-model="form.url"
+            type="url"
+            required
+            class="mt-1"
+            :class="{ 'border-red-500': errors.url }"
+          />
+          <p v-if="errors.url" class="text-red-500 text-sm mt-1">
+            {{ errors.url }}
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" @click="onCancel">
+            取消
+          </Button>
+          <Button type="submit" :disabled="loading">
+            {{ loading ? '保存中...' : '保存' }}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
+interface Props {
+  title: string
+  initialData?: { name: string; url: string }
+}
+
+interface Emits {
+  (e: 'save', data: { name: string; url: string }): void
+  (e: 'cancel'): void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  initialData: () => ({ name: '', url: '' })
+})
+
+const emit = defineEmits<Emits>()
+
+const isOpen = ref(false)
+const loading = ref(false)
+const form = reactive({ ...props.initialData })
+const errors = reactive<Record<string, string>>({})
+
+const validateForm = () => {
+  Object.keys(errors).forEach(key => delete errors[key])
+
+  if (!form.name.trim()) {
+    errors.name = '名称不能为空'
+  }
+
+  if (!form.url.trim()) {
+    errors.url = 'URL不能为空'
+  } else if (!/^https?:\/\/.+/.test(form.url)) {
+    errors.url = '请输入有效的URL'
+  }
+
+  return Object.keys(errors).length === 0
+}
+
+const onSubmit = async () => {
+  if (!validateForm()) return
+
+  loading.value = true
+  try {
+    emit('save', { ...form })
+    isOpen.value = false
+  } catch (error) {
+    console.error('Save failed:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const onCancel = () => {
+  emit('cancel')
+  isOpen.value = false
+}
+</script>
+```
+</example>
+
+<example type="invalid">
+```vue
+<template>
+  <div class="dialog-overlay" @click="close">
+    <div class="dialog-content" @click.stop>
+      <h2>{{ title }}</h2>
+
+      <form @submit.prevent="onSubmit">
+        <input v-model="form.name" placeholder="名称" />
+        <input v-model="form.url" placeholder="URL" />
+
+        <div>
+          <button type="button" @click="close">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+// 错误：没有使用UI组件库
+// 错误：没有可访问性支持
+// 错误：没有类型定义
+// 错误：没有表单验证
+// 错误：使用自定义CSS而非Tailwind类
+
+const form = reactive({
+  name: '',
+  url: ''
+})
+
+const onSubmit = () => {
+  // 没有验证
+  emit('save', form)
+}
+</script>
+
+<style scoped>
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+}
+</style>
+```
+</example>
