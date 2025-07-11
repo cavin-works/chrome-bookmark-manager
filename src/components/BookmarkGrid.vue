@@ -78,6 +78,10 @@
                   <FolderIcon class="w-3 h-3 mr-1 flex-shrink-0" />
                   <span class="truncate">{{ getBookmarkPath(bookmark.parentId) }}</span>
                 </div>
+                <div v-if="bookmark.dateAdded" class="flex items-center text-xs text-muted-foreground/60 mt-1">
+                  <CalendarDays class="w-3 h-3 mr-1 flex-shrink-0" />
+                  <span class="whitespace-nowrap">{{ formatDate(bookmark.dateAdded) }}</span>
+                </div>
               </div>
             </div>
 
@@ -143,7 +147,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Plus, Edit, Trash2, BookmarkX, Folder as FolderIcon } from 'lucide-vue-next';
+import { Plus, Edit, Trash2, BookmarkX, Folder as FolderIcon, CalendarDays } from 'lucide-vue-next';
 import type { Bookmark } from '../utils/types';
 import { getDefaultIcon as getDefaultIconUtil } from '../utils/defaultIcon';
 
@@ -310,5 +314,19 @@ const getBookmarkPath = (parentId?: string): string => {
 
   const pathArray = buildPath(parentId);
   return pathArray.join(' / ');
+};
+
+// 格式化日期
+const formatDate = (timestamp: number): string => {
+  const date = new Date(timestamp);
+
+  // 格式化为 YYYY-MM-DD HH:mm 的形式
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
 </script>
