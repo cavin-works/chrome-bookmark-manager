@@ -1,0 +1,205 @@
+/* 页面样式文件 - 特定页面的布局和样式 */
+/* 全局副作用：定义页面级别的布局结构 */
+
+@layer components {
+  
+  /* ===== 新标签页布局 ===== */
+  .newtab-container {
+    @apply h-screen flex flex-col;
+  }
+
+  .newtab-header {
+    @apply h-16 z-50;
+  }
+
+  .newtab-header-content {
+    @apply px-6 h-full;
+  }
+
+  .newtab-title {
+    @apply m-0 text-xl font-semibold;
+  }
+
+  .newtab-main-layout {
+    @apply flex-1 overflow-hidden;
+  }
+
+  .newtab-sidebar {
+    /* 样式通过 Tailwind 类处理 */
+  }
+
+  .newtab-sidebar-content {
+    @apply h-full flex flex-col py-4;
+  }
+
+  .newtab-content {
+    @apply overflow-hidden;
+  }
+
+  .newtab-content-scrollbar {
+    @apply h-full;
+  }
+
+  .newtab-content-wrapper {
+    @apply p-6 max-w-7xl mx-auto;
+  }
+
+  /* ===== 搜索栏布局 ===== */
+  .search-bar {
+    @apply flex gap-4 mb-6 items-start;
+  }
+
+  .search-section {
+    @apply flex-1;
+  }
+
+  .search-input {
+    @apply w-full;
+  }
+
+  .controls-section {
+    @apply flex-shrink-0;
+  }
+
+  /* ===== 书签网格布局 ===== */
+  .bookmarks-container {
+    @apply relative min-h-52;
+  }
+
+  .bookmarks-grid {
+    @apply grid gap-4;
+  }
+
+  .bookmarks-grid.grid {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .bookmarks-grid.list {
+    @apply grid-cols-1 gap-2;
+  }
+
+  /* ===== 书签卡片样式 ===== */
+  .bookmark-card {
+    @apply transition-all duration-200 ease-in-out cursor-pointer;
+  }
+
+  .bookmark-card:hover {
+    @apply -translate-y-0.5 shadow-lg;
+  }
+
+  .bookmark-icon {
+    @apply rounded flex-shrink-0;
+  }
+
+  .bookmark-title-container {
+    @apply flex-1 min-w-0;
+  }
+
+  .bookmark-title {
+    @apply text-sm font-semibold leading-tight;
+  }
+
+  .bookmark-url {
+    @apply text-xs mt-0.5 leading-tight;
+  }
+
+  .bookmark-meta {
+    @apply flex flex-wrap gap-2 items-center mt-2;
+  }
+
+  .category-tag {
+    @apply flex-shrink-0;
+  }
+
+  .bookmark-tags {
+    @apply flex-1 min-w-0;
+  }
+
+  /* ===== 全部书签区域 ===== */
+  .all-bookmarks-section {
+    @apply px-3 mb-3;
+  }
+
+  .all-bookmarks-header {
+    @apply flex items-center justify-between gap-2;
+  }
+
+  .all-bookmarks-item {
+    @apply flex-1 bg-transparent rounded-lg cursor-pointer transition-colors duration-200 min-h-10;
+  }
+
+  .all-bookmarks-content {
+    @apply flex items-center px-3 py-2.5 gap-2.5;
+  }
+
+  .all-bookmarks-icon {
+    @apply text-base flex-shrink-0;
+  }
+
+  .all-bookmarks-label {
+    @apply flex-1 text-sm font-medium;
+  }
+
+  .all-bookmarks-count {
+    @apply text-xs opacity-70;
+  }
+
+  .add-folder-btn {
+    @apply flex-shrink-0;
+  }
+
+  /* ===== 侧边栏树形结构 ===== */
+  .sidebar-tree {
+    @apply flex-1 overflow-hidden px-1;
+  }
+
+  /* ===== 加载和空状态 ===== */
+  .loading-container {
+    @apply flex justify-center items-center min-h-52;
+  }
+
+  .loading-content {
+    @apply text-center;
+  }
+
+  .empty-state {
+    @apply min-h-80;
+  }
+
+  .search-result-info {
+    @apply mb-4 py-2;
+  }
+
+  /* ===== 响应式设计 ===== */
+  @media (max-width: 768px) {
+    .newtab-content-wrapper {
+      @apply p-4;
+    }
+
+    .search-bar {
+      @apply flex-col gap-3;
+    }
+
+    .bookmarks-grid.grid {
+      @apply grid-cols-1;
+    }
+
+    .newtab-header-content {
+      @apply px-4;
+    }
+
+    .newtab-title {
+      @apply text-lg;
+    }
+  }
+
+  /* ===== 列表视图特殊样式 ===== */
+  .bookmarks-grid.list .bookmark-card {
+    @apply px-4 py-3;
+  }
+
+  /* ===== 深色模式适配 ===== */
+  .dark .bookmark-card:hover {
+    @apply shadow-2xl;
+  }
+}

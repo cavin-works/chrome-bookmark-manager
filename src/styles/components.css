@@ -1,0 +1,217 @@
+/* 组件样式文件 - 可复用的交互组件 */
+/* 全局副作用：定义可在多个组件中使用的样式类 */
+
+@layer components {
+  
+  /* ===== 主题切换组件 ===== */
+  .theme-transition {
+    transition: 
+      background-color var(--transition-duration) var(--transition-timing),
+      border-color var(--transition-duration) var(--transition-timing),
+      color var(--transition-duration) var(--transition-timing),
+      box-shadow var(--transition-duration) var(--transition-timing);
+  }
+
+  .theme-toggle {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+
+  .theme-toggle .icon-sun {
+    @apply transform transition-all duration-300;
+  }
+
+  .theme-toggle .icon-moon {
+    @apply transform transition-all duration-300;
+  }
+
+  .theme-toggle:not(.dark) .icon-sun {
+    @apply rotate-0 scale-100 opacity-100;
+  }
+
+  .theme-toggle:not(.dark) .icon-moon {
+    @apply rotate-90 scale-0 opacity-0;
+  }
+
+  .theme-toggle.dark .icon-sun {
+    @apply -rotate-90 scale-0 opacity-0;
+  }
+
+  .theme-toggle.dark .icon-moon {
+    @apply rotate-0 scale-100 opacity-100;
+  }
+
+  /* ===== 拖拽交互组件 ===== */
+  .draggable-item {
+    @apply cursor-grab select-none transition-all duration-200 ease-out;
+    touch-action: manipulation;
+  }
+
+  .draggable-item:hover {
+    @apply shadow-md hover:z-10;
+  }
+
+  .draggable-item:active {
+    @apply cursor-grabbing;
+  }
+
+  .draggable-item.dragging {
+    @apply cursor-grabbing opacity-80 scale-95 rotate-2 z-50;
+    transform-origin: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 6px 6px rgba(0, 0, 0, 0.1);
+    transition: none;
+  }
+
+  /* 拖拽指示器 */
+  .drop-indicator {
+    @apply absolute left-0 right-0 h-0.5 bg-primary rounded-full opacity-0 transition-all duration-150;
+    animation: pulse-glow 1.5s ease-in-out infinite;
+  }
+
+  .drop-indicator.show {
+    @apply opacity-100;
+  }
+
+  .drop-indicator.top {
+    @apply -top-1;
+  }
+
+  .drop-indicator.bottom {
+    @apply -bottom-1;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  /* 拖拽反馈 */
+  .drag-feedback.success {
+    @apply scale-110;
+    animation: drag-success 0.3s ease-out;
+  }
+
+  .drag-feedback.error {
+    @apply scale-95;
+    animation: drag-error 0.3s ease-out;
+  }
+
+  @keyframes drag-success {
+    0% { transform: scale(1); }
+    50% { 
+      transform: scale(1.1);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes drag-error {
+    0% { transform: scale(1); }
+    25% { 
+      transform: translateX(-5px) scale(0.95);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+    75% { transform: translateX(5px) scale(0.95); }
+    100% { transform: scale(1); }
+  }
+
+  /* ===== 悬停效果组件 ===== */
+  .hover-lift {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-0.5 shadow-lg;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .hover-glow:hover {
+    @apply shadow-md ring-2 ring-primary/20;
+  }
+
+  /* ===== 交互过渡效果 ===== */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-100 ease-in-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* ===== 文件夹项目样式 ===== */
+  .folder-item {
+    @apply relative transition-all duration-200 ease-out;
+  }
+
+  .folder-item:hover {
+    @apply -translate-y-0.5 shadow-lg;
+  }
+
+  .folder-item.dragging {
+    @apply opacity-50 rotate-1 scale-95 pointer-events-none z-50;
+  }
+
+  /* 拖拽位置指示器 */
+  .folder-item.insert-before::before {
+    content: '';
+    @apply absolute -top-0.5 left-2 right-2 h-0.5 bg-primary rounded-full;
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+    animation: dropIndicatorPulse 1.5s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  .folder-item.insert-after::after {
+    content: '';
+    @apply absolute -bottom-0.5 left-2 right-2 h-0.5 bg-primary rounded-full;
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+    animation: dropIndicatorPulse 1.5s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  .folder-item.drag-over {
+    @apply bg-accent border-2 border-dashed border-primary rounded-lg scale-105;
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.2);
+  }
+
+  @keyframes dropIndicatorPulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scaleY(0.8);
+    }
+  }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+  .theme-transition,
+  .draggable-item,
+  .folder-item,
+  .hover-lift,
+  .hover-glow,
+  .transition-smooth,
+  .transition-fast,
+  .transition-slow {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .hover-lift:hover,
+  .hover-glow:hover,
+  .folder-item:hover {
+    transform: none !important;
+  }
+}

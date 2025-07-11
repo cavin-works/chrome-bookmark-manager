@@ -1,0 +1,97 @@
+/* 样式覆盖文件 - 必要的第三方组件和特殊情况覆盖 */
+/* 全局副作用：使用高特异性选择器覆盖特定组件样式 */
+
+@layer components {
+  
+  /* ===== 侧边栏树形组件覆盖 ===== */
+  /* 注意：这些样式针对特定的树形组件结构，具有较高的特异性 */
+  
+  .sidebar-tree .tree-node .tree-node-content {
+    @apply px-4 py-3 rounded-xl min-h-14 flex items-center;
+  }
+
+  .sidebar-tree .tree-node .tree-node-content .icon {
+    @apply text-xl mr-3 w-5 h-5 flex items-center justify-center flex-shrink-0;
+  }
+
+  .sidebar-tree .tree-node .tree-node-content:hover {
+    @apply rounded-xl;
+    transform: translateX(6px) scale(1.02);
+  }
+
+  .sidebar-tree .tree-node.selected > .tree-node-content {
+    @apply rounded-xl min-h-14;
+  }
+
+  /* 全部书签特殊样式 */
+  .sidebar-tree .tree-node[data-key=""] .tree-node-content {
+    @apply rounded-2xl min-h-16;
+  }
+
+  .sidebar-tree .tree-node[data-key=""] .tree-node-content:hover {
+    @apply rounded-2xl;
+    transform: translateX(8px) scale(1.03);
+  }
+
+  /* 拖拽效果 */
+  .sidebar-tree .tree-node.drop-position-inside {
+    @apply rounded-xl scale-105 z-50;
+  }
+
+  .sidebar-tree .tree-node.drop-position-before::before,
+  .sidebar-tree .tree-node.drop-position-after::after {
+    @apply z-50;
+  }
+
+  .sidebar-tree .tree-node.dragging {
+    @apply rounded-xl;
+  }
+
+  /* 移动端适配 */
+  @media (max-width: 768px) {
+    .sidebar-tree .tree-node .tree-node-content .icon {
+      @apply text-base mr-2 w-4 h-4;
+    }
+  }
+
+  /* ===== 特殊交互覆盖 ===== */
+  /* 防止某些元素被拖拽 */
+  .no-drag {
+    @apply cursor-default;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+  }
+
+  /* 拖拽时的平滑效果 */
+  .drag-smooth {
+    will-change: transform;
+  }
+
+  .drag-instant {
+    transition: none !important;
+  }
+
+  /* ===== 高对比度模式适配 ===== */
+  @media (prefers-contrast: high) {
+    .drop-indicator {
+      @apply bg-foreground;
+      box-shadow: none;
+    }
+
+    .folder-item.drag-over {
+      @apply border-foreground bg-background;
+    }
+  }
+}
+
+/* 全局性能优化 */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-tree .tree-node .tree-node-content,
+  .sidebar-tree .tree-node .tree-node-content:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+}

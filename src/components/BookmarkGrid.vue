@@ -47,7 +47,7 @@
         :class="cn(
           'group cursor-pointer draggable-item theme-transition',
           layout === 'grid' ? 'hover-lift' : 'hover-glow',
-          'fade-in'
+          'animate-in fade-in-0 duration-300'
         )"
         :style="{ animationDelay: `${index * 50}ms` }"
         @click="$emit('open-bookmark', bookmark)"

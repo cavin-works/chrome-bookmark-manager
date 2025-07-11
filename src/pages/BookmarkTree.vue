@@ -4,7 +4,7 @@
       <div
         v-for="node in treeData"
         :key="node.key"
-        class="tree-node"
+        class="relative my-0.5"
       >
         <TreeNodeComponent
           :node="node"

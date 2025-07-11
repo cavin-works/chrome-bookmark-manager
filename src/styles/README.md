@@ -1,182 +1,172 @@
-# 样式文件结构说明
+# 样式系统文档
 
-## 目录结构
+## 概述
+
+本项目采用基于 Tailwind CSS 的样式系统，通过精心设计的文件结构实现样式的模块化管理。
+
+## 文件结构
 
 ```
 src/styles/
-├── index.css          # 样式索引文件，统一导入所有样式
-├── common.css         # 通用样式，包含CSS变量、工具类等
-├── newtab.css         # 新标签页专用样式
-└── README.md          # 样式文档说明
+├── index.css         # 样式入口文件
+├── base.css          # 基础样式和全局重置
+├── components.css    # 可复用的交互组件
+├── pages.css         # 页面特定布局和样式
+└── overrides.css     # 必要的样式覆盖
 ```
 
 ## 文件说明
 
 ### index.css
-样式索引文件，统一管理所有样式的导入。通过这个文件可以：
-- 统一管理样式依赖
-- 控制样式加载顺序
-- 方便样式模块化管理
+样式系统的入口文件，按照正确的顺序导入所有样式文件。
 
-### common.css
-通用样式文件，包含：
-- CSS变量定义（颜色、间距、字体等）
-- 基础重置样式
-- 通用工具类（布局、间距、颜色等）
-- 响应式工具类
-- 动画类
-- 滚动条样式
-- 焦点和选择样式
+### base.css - 基础样式
+**全局副作用：** 影响所有元素的基础样式
 
-### newtab.css
-新标签页专用样式，包含：
-- 容器样式
-- 头部样式
-- 侧边栏样式
-- 内容区域样式
-- 搜索栏样式
-- 书签卡片样式
-- 按钮样式
-- 模态框样式
-- 表单样式
-- 深色主题样式
+包含内容：
+- Tailwind CSS 基础导入
+- CSS 变量定义（主题色彩、间距、动画等）
+- 全局重置样式
+- 深色模式配置
+
+### components.css - 交互组件
+**全局副作用：** 定义可在多个组件中使用的样式类
+
+包含内容：
+- 主题切换组件（`.theme-transition`, `.theme-toggle`）
+- 拖拽交互组件（`.draggable-item`, `.drop-indicator`）
+- 悬停效果组件（`.hover-lift`, `.hover-glow`）
+- 文件夹项目样式（`.folder-item`）
+- 过渡动画类（`.transition-smooth`, `.transition-fast`）
+
+### pages.css - 页面布局
+**全局副作用：** 定义页面级别的布局结构
+
+包含内容：
+- 新标签页布局（`.newtab-container`, `.newtab-header`）
+- 搜索栏布局（`.search-bar`, `.search-section`）
+- 书签网格布局（`.bookmarks-grid`, `.bookmark-card`）
+- 侧边栏结构（`.sidebar-tree`, `.all-bookmarks-section`）
 - 响应式设计
 
-## 使用方式
+### overrides.css - 样式覆盖
+**全局副作用：** 使用高特异性选择器覆盖特定组件样式
 
-### 在Vue组件中使用
+包含内容：
+- 侧边栏树形组件覆盖
+- 特殊交互覆盖（`.no-drag`, `.drag-smooth`）
+- 无障碍和性能优化
+
+## 使用指南
+
+### 在 Vue 组件中使用
 ```vue
 <style>
 @import '../styles/index.css';
 </style>
 ```
 
-### 在HTML文件中使用
+### 在 HTML 文件中使用
 ```html
 <link rel="stylesheet" href="../styles/index.css">
 ```
 
-## CSS变量
+## 样式类说明
 
-项目使用CSS变量来管理主题和样式，主要变量包括：
+### 主题相关
+- `.theme-transition` - 主题切换过渡动画
+- `.theme-toggle` - 主题切换按钮
 
-### 颜色变量
-- `--primary-color`: 主色调
-- `--secondary-color`: 次要色调
-- `--success-color`: 成功色
-- `--warning-color`: 警告色
-- `--danger-color`: 危险色
-- `--info-color`: 信息色
+### 拖拽交互
+- `.draggable-item` - 可拖拽元素
+- `.drop-indicator` - 拖拽指示器
+- `.folder-item` - 文件夹项目样式
 
-### 背景颜色
-- `--bg-primary`: 主背景色
-- `--bg-secondary`: 次要背景色
-- `--bg-dark`: 深色背景
-- `--bg-darker`: 更深色背景
-
-### 文字颜色
-- `--text-primary`: 主要文字色
-- `--text-secondary`: 次要文字色
-- `--text-light`: 浅色文字
-- `--text-muted`: 静音文字色
-
-### 间距变量
-- `--spacing-xs`: 超小间距 (0.25rem)
-- `--spacing-sm`: 小间距 (0.5rem)
-- `--spacing-md`: 中等间距 (1rem)
-- `--spacing-lg`: 大间距 (1.5rem)
-- `--spacing-xl`: 超大间距 (2rem)
-- `--spacing-xxl`: 极大间距 (3rem)
-
-### 字体大小
-- `--font-size-xs`: 超小字体 (0.75rem)
-- `--font-size-sm`: 小字体 (0.875rem)
-- `--font-size-base`: 基础字体 (1rem)
-- `--font-size-lg`: 大字体 (1.125rem)
-- `--font-size-xl`: 超大字体 (1.25rem)
-- `--font-size-xxl`: 极大字体 (1.5rem)
-
-### 圆角
-- `--border-radius-sm`: 小圆角 (4px)
-- `--border-radius`: 基础圆角 (8px)
-- `--border-radius-lg`: 大圆角 (12px)
-- `--border-radius-xl`: 超大圆角 (16px)
-
-### 阴影
-- `--shadow-sm`: 小阴影
-- `--shadow-md`: 中等阴影
-- `--shadow-lg`: 大阴影
+### 悬停效果
+- `.hover-lift` - 悬停上升效果
+- `.hover-glow` - 悬停发光效果
 
 ### 过渡动画
-- `--transition-fast`: 快速过渡 (0.15s)
-- `--transition-base`: 基础过渡 (0.3s)
-- `--transition-slow`: 慢速过渡 (0.5s)
+- `.transition-smooth` - 平滑过渡（200ms）
+- `.transition-fast` - 快速过渡（100ms）
+- `.transition-slow` - 慢速过渡（300ms）
 
-## 工具类
+### 页面布局
+- `.newtab-container` - 新标签页主容器
+- `.bookmarks-grid` - 书签网格布局
+- `.bookmark-card` - 书签卡片
 
-项目提供了丰富的工具类，包括：
+## 全局副作用说明
 
-### 布局类
-- `.d-flex`, `.d-block`, `.d-none` 等显示类
-- `.flex-row`, `.flex-column` 等弹性布局类
-- `.justify-content-*`, `.align-items-*` 等对齐类
+### 1. 基础样式（base.css）
+- **作用范围：** 全局所有元素
+- **副作用：** 重置默认样式，设置全局字体和颜色
+- **注意：** 影响整个应用的基础外观
 
-### 间距类
-- `.m-*`, `.p-*` 等边距和内边距类
-- `.mt-*`, `.mb-*`, `.ml-*`, `.mr-*` 等方向边距类
-- `.pt-*`, `.pb-*`, `.pl-*`, `.pr-*` 等方向内边距类
+### 2. 组件样式（components.css）
+- **作用范围：** 使用特定类名的元素
+- **副作用：** 定义动画关键帧，可能影响同名动画
+- **注意：** 确保类名唯一性，避免冲突
 
-### 颜色类
-- `.text-primary`, `.text-secondary` 等文字颜色类
-- `.bg-primary`, `.bg-secondary` 等背景颜色类
+### 3. 页面样式（pages.css）
+- **作用范围：** 特定页面的布局元素
+- **副作用：** 定义页面级别的布局结构
+- **注意：** 主要用于新标签页，对其他页面影响最小
 
-### 其他工具类
-- `.rounded`, `.shadow` 等装饰类
-- `.position-*` 等定位类
-- `.opacity-*` 等透明度类
+### 4. 覆盖样式（overrides.css）
+- **作用范围：** 特定组件和元素
+- **副作用：** 使用高特异性选择器，可能影响样式优先级
+- **注意：** 谨慎使用，避免过度覆盖
 
-## 主题支持
+## 性能优化
 
-项目支持浅色和深色主题，通过CSS变量实现主题切换：
+### 1. 无障碍支持
+- 所有动画都支持 `prefers-reduced-motion` 媒体查询
+- 支持高对比度模式
+- 支持屏幕阅读器
 
-```css
-/* 浅色主题（默认） */
-:root {
-  --bg-primary: #ffffff;
-  --text-primary: #333333;
-  /* ... */
-}
+### 2. 性能优化
+- 使用 CSS 层级（@layer）管理样式优先级
+- 最小化重复样式定义
+- 优化选择器性能
 
-/* 深色主题 */
-[data-theme="dark"] {
-  --bg-primary: #2c3e50;
-  --text-primary: #ffffff;
-  /* ... */
-}
-```
+## 维护指南
 
-## 响应式设计
+### 1. 添加新样式
+- 组件样式添加到 `components.css`
+- 页面样式添加到 `pages.css`
+- 避免在 `overrides.css` 中添加新样式
 
-项目使用移动优先的响应式设计，主要断点：
-- 576px (sm)
-- 768px (md)
-- 992px (lg)
-- 1200px (xl)
+### 2. 修改现有样式
+- 优先使用 Tailwind 工具类
+- 必要时在对应的样式文件中修改
+- 避免使用 `!important`
 
-## 扩展建议
+### 3. 删除样式
+- 确认样式未被使用后再删除
+- 保持文件结构的完整性
 
-### 添加新组件样式
-1. 在 `src/styles/components/` 目录下创建组件样式文件
-2. 在 `index.css` 中导入新组件样式
-3. 使用CSS变量保持样式一致性
+## 最佳实践
 
-### 添加新主题
-1. 在 `src/styles/themes/` 目录下创建主题样式文件
-2. 在 `index.css` 中导入新主题样式
-3. 通过JavaScript动态切换主题
+1. **优先使用 Tailwind 类**：避免编写自定义 CSS
+2. **明确全局副作用**：了解每个样式文件的影响范围
+3. **遵循导入顺序**：确保样式正确应用
+4. **使用语义化类名**：便于维护和理解
+5. **支持无障碍**：确保所有用户都能正常使用
 
-### 优化建议
-1. 使用CSS变量保持样式一致性
-2. 合理使用工具类减少重复代码
-3. 遵循移动优先的响应式设计原则
-4. 保持样式的模块化和可维护性
+## 故障排除
+
+### 样式未生效
+1. 检查导入顺序是否正确
+2. 确认 Tailwind 类名拼写
+3. 检查 CSS 层级覆盖
+
+### 性能问题
+1. 检查是否有不必要的动画
+2. 确认 `prefers-reduced-motion` 支持
+3. 优化选择器复杂度
+
+### 主题切换问题
+1. 检查 CSS 变量定义
+2. 确认深色模式配置
+3. 验证主题切换逻辑

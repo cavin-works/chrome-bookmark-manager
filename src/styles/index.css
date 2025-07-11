@@ -1,22 +1,21 @@
-/* 样式索引文件 - 统一导入所有样式 */
+/* 样式入口文件 - 统一导入优化后的样式系统 */
 
-/* 基础样式 */
-@import './common.css';
+/* 
+  样式导入顺序说明：
+  1. base.css - 基础样式和全局重置（全局副作用）
+  2. components.css - 可复用的交互组件（全局副作用）
+  3. pages.css - 页面特定布局和样式（页面级副作用）
+  4. overrides.css - 必要的样式覆盖（特定组件副作用）
+*/
 
-/* 页面样式 */
-@import './newtab.css';
+/* 基础样式 - 包含 Tailwind 基础、CSS变量和全局重置 */
+@import './base.css';
 
-/* 组件样式 */
-/* @import './components/button.css'; */
-/* @import './components/modal.css'; */
-/* @import './components/form.css'; */
+/* 组件样式 - 可复用的交互组件（主题切换、拖拽、动画等） */
+@import './components.css';
 
-/* 主题样式 */
-/* @import './themes/light.css'; */
-/* @import './themes/dark.css'; */
+/* 页面样式 - 特定页面的布局和结构 */
+@import './pages.css';
 
-/* 响应式样式 */
-/* @import './responsive.css'; */
-
-/* 动画样式 */
-/* @import './animations.css'; */
+/* 覆盖样式 - 必要的第三方组件和特殊情况覆盖 */
+@import './overrides.css';
