@@ -5,7 +5,7 @@
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           :model-value="searchQuery"
-          @update:model-value="$emit('update:search-query', $event)"
+          @update:model-value="$emit('update:search-query', String($event))"
           placeholder="搜索标题、网址、描述、标签..."
           class="pl-9"
           @input="$emit('search-input')"

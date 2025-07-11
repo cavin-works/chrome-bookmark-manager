@@ -23,7 +23,7 @@
               <div class="flex items-center space-x-2">
                 <img
                   :src="currentPage.icon || '/icon/default.png'"
-                  @error="(e) => e.target.src = '/icon/default.png'"
+                  @error="(e) => (e.target as HTMLImageElement).src = '/icon/default.png'"
                   class="w-6 h-6 rounded"
                   alt="Page icon"
                 />
@@ -132,7 +132,7 @@
                 >
                   <img
                     :src="bookmark.icon || '/icon/default.png'"
-                    @error="(e) => e.target.src = '/icon/default.png'"
+                    @error="(e) => (e.target as HTMLImageElement).src = '/icon/default.png'"
                     class="w-4 h-4 rounded flex-shrink-0"
                     alt="Bookmark icon"
                   />
@@ -216,6 +216,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { Toaster } from '@/components/ui/toast';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { cn } from '@/lib/utils';
+import chrome from 'webextension-polyfill';
 
 import { Bookmark as BookmarkType, UserSettings } from '../utils/types';
 import { bookmarkService } from '../services/bookmarkService';
@@ -345,6 +346,7 @@ const getCurrentPage = async () => {
       if (settings.value.autoCategorize && !existing) {
         try {
           aiResult.value = await aiService.categorizeBookmark({
+            id: 'temp-id',
             title: tab.title || '',
             url: tab.url
           });

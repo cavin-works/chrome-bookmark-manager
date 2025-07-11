@@ -312,7 +312,6 @@ const renderSuffix = ({ option }: any) => {
       NText,
       {
         depth: 3,
-        class: 'tree-count',
         class: 'tree-count text-xs font-medium'
       },
       { default: () => `(${node.count})` }
