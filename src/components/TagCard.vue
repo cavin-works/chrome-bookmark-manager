@@ -83,6 +83,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { type Tag } from '@/services/tagStorageService';
 import {
   Edit2,
   Bookmark,
@@ -91,16 +92,6 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-vue-next';
-
-// 标签类型定义
-interface Tag {
-  name: string;
-  color: string;
-  description?: string;
-  usage: number;
-  createdAt: Date;
-  lastUsed?: Date;
-}
 
 // Props
 interface Props {

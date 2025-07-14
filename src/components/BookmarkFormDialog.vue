@@ -81,6 +81,55 @@
               </SelectContent>
             </Select>
           </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">标签</label>
+            <div class="space-y-3">
+              <!-- 已选择的标签 -->
+              <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-2">
+                <Badge
+                  v-for="tag in selectedTags"
+                  :key="tag.id"
+                  variant="secondary"
+                  class="text-xs flex items-center gap-1"
+                  :style="{ borderColor: tag.color, backgroundColor: `${tag.color}20` }"
+                >
+                  {{ tag.name }}
+                  <X 
+                    class="w-3 h-3 cursor-pointer hover:text-destructive" 
+                    @click="removeTag(tag)"
+                  />
+                </Badge>
+              </div>
+              
+              <!-- 标签选择下拉 -->
+              <Select v-model="selectedTagId" @update:model-value="addTag">
+                <SelectTrigger class="w-full">
+                  <SelectValue placeholder="选择标签..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="tag in availableTags"
+                    :key="tag.id"
+                    :value="tag.id"
+                  >
+                    <div class="flex items-center gap-2">
+                      <div 
+                        class="w-3 h-3 rounded-full" 
+                        :style="{ backgroundColor: tag.color }"
+                      ></div>
+                      {{ tag.name }}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <!-- 提示信息 -->
+              <p v-if="availableTags.length === 0" class="text-xs text-muted-foreground">
+                暂无可用标签，请先到标签管理页面创建标签
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -97,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, withDefaults } from 'vue';
+import { ref, watch, computed, withDefaults, onMounted } from 'vue';
 import {
   Dialog,
   DialogContent,
@@ -109,11 +158,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import Select from '@/components/ui/select/Select.vue';
 import SelectContent from '@/components/ui/select/SelectContent.vue';
 import SelectItem from '@/components/ui/select/SelectItem.vue';
 import SelectTrigger from '@/components/ui/select/SelectTrigger.vue';
 import SelectValue from '@/components/ui/select/SelectValue.vue';
+import { X } from 'lucide-vue-next';
+import { tagStorageService, type Tag } from '@/services/tagStorageService';
 
 interface BookmarkForm {
   title: string;
@@ -121,6 +173,7 @@ interface BookmarkForm {
   description: string;
   category: string;
   parentId: string;
+  tags?: string[]; // 添加标签ID数组
 }
 
 interface Props {
@@ -128,15 +181,17 @@ interface Props {
   categoryOptions: Array<{ label: string; value: string }>;
   folderOptions: Array<{ label: string; value: string }>;
   editingBookmark?: BookmarkForm | null;
+  bookmarkId?: string; // 用于编辑时加载现有标签
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  editingBookmark: null
+  editingBookmark: null,
+  bookmarkId: undefined
 });
 
 const emit = defineEmits<{
   'update:show': [show: boolean];
-  'confirm': [data: BookmarkForm];
+  'confirm': [data: BookmarkForm & { tagIds: string[] }];
 }>();
 
 const formData = ref<BookmarkForm>({
@@ -145,9 +200,21 @@ const formData = ref<BookmarkForm>({
   description: '',
   category: '',
   parentId: '',
+  tags: []
 });
 
+// 标签相关状态
+const allTags = ref<Tag[]>([]);
+const selectedTags = ref<Tag[]>([]);
+const selectedTagId = ref<string>('');
+
 const isEditing = computed(() => !!props.editingBookmark);
+
+// 计算可用的标签（排除已选择的）
+const availableTags = computed(() => {
+  const selectedTagIds = selectedTags.value.map(tag => tag.id);
+  return allTags.value.filter(tag => !selectedTagIds.includes(tag.id));
+});
 
 // 重置表单
 const resetForm = () => {
@@ -157,28 +224,77 @@ const resetForm = () => {
     description: '',
     category: '',
     parentId: '',
+    tags: []
   };
+  selectedTags.value = [];
+  selectedTagId.value = '';
+};
+
+// 加载所有标签
+const loadAllTags = async () => {
+  try {
+    allTags.value = await tagStorageService.getAllTags();
+  } catch (error) {
+    console.error('加载标签失败:', error);
+  }
+};
+
+// 加载书签的现有标签
+const loadBookmarkTags = async () => {
+  if (!props.bookmarkId) return;
+  
+  try {
+    const tags = await tagStorageService.getTagsForBookmark(props.bookmarkId);
+    selectedTags.value = tags;
+  } catch (error) {
+    console.error('加载书签标签失败:', error);
+  }
+};
+
+// 添加标签
+const addTag = (tagId: any) => {
+  if (!tagId) return;
+  
+  const tagIdStr = String(tagId);
+  const tag = allTags.value.find(t => t.id === tagIdStr);
+  if (tag && !selectedTags.value.some(t => t.id === tagIdStr)) {
+    selectedTags.value.push(tag);
+  }
+  
+  // 重置选择器
+  selectedTagId.value = '';
+};
+
+// 移除标签
+const removeTag = (tag: Tag) => {
+  const index = selectedTags.value.findIndex(t => t.id === tag.id);
+  if (index > -1) {
+    selectedTags.value.splice(index, 1);
+  }
 };
 
 // 初始化表单数据
-const initFormData = () => {
+const initFormData = async () => {
   if (props.editingBookmark) {
     formData.value = { ...props.editingBookmark };
+    // 加载书签的现有标签
+    await loadBookmarkTags();
   } else {
     resetForm();
   }
 };
 
 // 监听显示状态和编辑数据
-watch(() => props.show, (newShow) => {
+watch(() => props.show, async (newShow) => {
   if (newShow) {
-    initFormData();
+    await loadAllTags();
+    await initFormData();
   }
 });
 
-watch(() => props.editingBookmark, () => {
+watch(() => props.editingBookmark, async () => {
   if (props.show) {
-    initFormData();
+    await initFormData();
   }
 });
 
@@ -188,8 +304,17 @@ const handleCancel = () => {
 };
 
 const handleConfirm = () => {
-  emit('confirm', { ...formData.value });
+  const tagIds = selectedTags.value.map(tag => tag.id);
+  emit('confirm', { 
+    ...formData.value, 
+    tagIds 
+  });
   emit('update:show', false);
   resetForm();
 };
+
+// 组件挂载时加载标签
+onMounted(async () => {
+  await loadAllTags();
+});
 </script>

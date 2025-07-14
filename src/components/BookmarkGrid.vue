@@ -108,18 +108,26 @@
           </div>
         </CardHeader>
 
-        <CardContent v-if="bookmark.category || (bookmark.tags && bookmark.tags.length > 0)" class="pt-0">
+        <CardContent v-if="bookmark.category || getBookmarkTags(bookmark.id).length > 0" class="pt-0">
           <div class="flex flex-wrap gap-1">
             <Badge v-if="bookmark.category" variant="secondary" class="text-xs">
               {{ bookmark.category }}
             </Badge>
             <Badge
-              v-for="tag in bookmark.tags?.slice(0, 2)"
-              :key="tag"
+              v-for="tag in getBookmarkTags(bookmark.id).slice(0, 3)"
+              :key="tag.id"
               variant="outline"
               class="text-xs"
+              :style="{ borderColor: tag.color, color: tag.color }"
             >
-              {{ tag }}
+              {{ tag.name }}
+            </Badge>
+            <Badge
+              v-if="getBookmarkTags(bookmark.id).length > 3"
+              variant="secondary"
+              class="text-xs"
+            >
+              +{{ getBookmarkTags(bookmark.id).length - 3 }}
             </Badge>
           </div>
         </CardContent>
@@ -150,6 +158,7 @@ import { cn } from '@/lib/utils';
 import { Plus, Edit, Trash2, BookmarkX, Folder as FolderIcon, CalendarDays } from 'lucide-vue-next';
 import type { Bookmark } from '../utils/types';
 import { getDefaultIcon as getDefaultIconUtil } from '../utils/defaultIcon';
+import { tagStorageService, type Tag } from '@/services/tagStorageService';
 
 interface Props {
   filteredBookmarks: Bookmark[];
@@ -175,6 +184,9 @@ const emit = defineEmits<{
 // 分页状态
 const page = ref(1);
 
+// 标签状态
+const bookmarkTags = ref<{ [bookmarkId: string]: Tag[] }>({});
+
 // 计算当前显示的书签
 const displayedBookmarks = computed(() => {
   return props.filteredBookmarks.slice(0, page.value * props.itemsPerPage);
@@ -185,9 +197,10 @@ const hasMoreToLoad = computed(() => {
   return displayedBookmarks.value.length < props.filteredBookmarks.length;
 });
 
-// 监听 filteredBookmarks 的变化，重置分页
-watch(() => props.filteredBookmarks, () => {
+// 监听 filteredBookmarks 的变化，重置分页并重新加载标签
+watch(() => props.filteredBookmarks, async () => {
   page.value = 1;
+  await loadBookmarkTags();
 });
 
 // 加载更多数据
@@ -196,6 +209,30 @@ const loadMore = () => {
     page.value++;
     emit('load-more');
   }
+};
+
+// 加载书签标签
+const loadBookmarkTags = async () => {
+  try {
+    const tagsMap: { [bookmarkId: string]: Tag[] } = {};
+    
+    // 为每个书签加载标签
+    for (const bookmark of props.filteredBookmarks) {
+      const tags = await tagStorageService.getTagsForBookmark(bookmark.id);
+      if (tags.length > 0) {
+        tagsMap[bookmark.id] = tags;
+      }
+    }
+    
+    bookmarkTags.value = tagsMap;
+  } catch (error) {
+    console.error('加载书签标签失败:', error);
+  }
+};
+
+// 获取书签的标签
+const getBookmarkTags = (bookmarkId: string): Tag[] => {
+  return bookmarkTags.value[bookmarkId] || [];
 };
 
 // Intersection Observer 用于检测滚动触发器
@@ -241,8 +278,9 @@ watch(loadTrigger, (newTrigger) => {
   }
 });
 
-onMounted(() => {
+onMounted(async () => {
   setupIntersectionObserver();
+  await loadBookmarkTags();
 });
 
 onUnmounted(() => {

@@ -52,6 +52,7 @@
           :category-options="categoryOptions"
           :folder-options="folderOptions"
           :editing-bookmark="editingBookmark"
+          :bookmark-id="editingBookmark ? getBookmarkIdFromEditingData() : undefined"
           @confirm="handleBookmarkSubmit"
         />
 
@@ -134,6 +135,7 @@ import { bookmarkService } from '../services/bookmarkService';
 import { iconService } from '../services/iconService';
 import { aiService } from '../services/aiService';
 import { storageService } from '../services/storageService';
+import { tagStorageService } from '../services/tagStorageService';
 import { debounce, getSystemTheme } from '../utils/helpers';
 import { getDefaultIcon as getDefaultIconUtil } from '../utils/defaultIcon';
 
@@ -281,6 +283,19 @@ const handleBookmarkSubmit = async (formData: any) => {
   editingBookmark.value = null;
 };
 
+// 获取编辑书签的ID
+const getBookmarkIdFromEditingData = (): string | undefined => {
+  if (!editingBookmark.value) return undefined;
+  
+  // 根据标题和URL查找书签ID
+  const bookmark = bookmarks.value.find(b => 
+    b.title === editingBookmark.value?.title && 
+    b.url === editingBookmark.value?.url
+  );
+  
+  return bookmark?.id;
+};
+
 const addBookmark = async (formData: any) => {
   try {
     const bookmarkData = {
@@ -306,6 +321,15 @@ const addBookmark = async (formData: any) => {
         });
       } catch (error) {
         console.error('AI分类失败:', error);
+      }
+    }
+
+    // 分配选中的标签
+    if (formData.tagIds && formData.tagIds.length > 0) {
+      try {
+        await tagStorageService.assignTagsToBookmark(bookmark.id, formData.tagIds);
+      } catch (error) {
+        console.error('分配标签失败:', error);
       }
     }
 
@@ -340,6 +364,16 @@ const updateBookmark = async (formData: any) => {
     
     if (originalBookmark) {
       await bookmarkService.updateBookmark(originalBookmark.id, bookmarkData);
+      
+      // 更新标签分配
+      if (formData.tagIds) {
+        try {
+          await tagStorageService.assignTagsToBookmark(originalBookmark.id, formData.tagIds);
+        } catch (error) {
+          console.error('更新标签失败:', error);
+        }
+      }
+      
       await loadBookmarks();
       toast({
         title: "更新成功",
