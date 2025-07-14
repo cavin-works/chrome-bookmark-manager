@@ -1,5 +1,6 @@
 <template>
-  <Card class="p-4 hover:shadow-md transition-shadow">
+  <Card class="p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-primary/20"
+       @click="$emit('select', tag)">
     <div class="space-y-3">
       <!-- 标签头部 -->
       <div class="flex items-center justify-between">
@@ -14,7 +15,7 @@
           <Button
             variant="ghost"
             size="sm"
-            @click="$emit('edit', tag)"
+            @click.stop="$emit('edit', tag)"
             class="h-8 w-8 p-0"
           >
             <Edit2 class="w-4 h-4" />
@@ -22,7 +23,7 @@
           <Button
             variant="ghost"
             size="sm"
-            @click="$emit('delete', tag)"
+            @click.stop="$emit('delete', tag)"
             class="h-8 w-8 p-0 text-destructive"
           >
             <Trash2 class="w-4 h-4" />
@@ -105,6 +106,7 @@ defineProps<Props>();
 defineEmits<{
   edit: [tag: Tag];
   delete: [tag: Tag];
+  select: [tag: Tag];
 }>();
 
 // 格式化日期
