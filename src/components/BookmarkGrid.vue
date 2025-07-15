@@ -85,7 +85,7 @@
               </div>
             </div>
 
-            <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
                 size="sm"

@@ -7,9 +7,14 @@
         <p class="text-muted-foreground mt-1">管理和组织您的书签标签</p>
       </div>
       <div class="flex items-center space-x-2">
-        <Button @click="deduplicateTags" variant="outline" size="sm" :disabled="allTags.length === 0">
-          <RefreshCw class="w-4 h-4 mr-2" />
-          去重标签
+        <Button 
+          @click="deduplicateState.showConfirmDialog = true" 
+          variant="outline" 
+          size="sm" 
+          :disabled="allTags.length === 0 || deduplicateState.isDeduplicating"
+        >
+          <RefreshCw :class="['w-4 h-4 mr-2', deduplicateState.isDeduplicating ? 'animate-spin' : '']" />
+          {{ deduplicateState.isDeduplicating ? '正在去重...' : '去重标签' }}
         </Button>
         <Button @click="showAIOrganize = true" variant="outline" :disabled="untaggedBookmarksCount === 0">
           <Bot class="w-4 h-4 mr-2" />
@@ -75,18 +80,6 @@
           </div>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardContent class="p-6">
-          <div class="flex items-center space-x-2">
-            <AlertTriangle class="w-5 h-5 text-orange-500" />
-            <div>
-              <p class="text-sm font-medium">未使用标签</p>
-              <p class="text-2xl font-bold">{{ unusedTags.length }}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
 
     <!-- 搜索和过滤 -->
@@ -140,20 +133,32 @@
       <!-- 有标签时显示标签列表 -->
       <template v-else>
         <!-- 常用标签 -->
-        <div v-if="popularTags.length > 0">
-          <h3 class="text-lg font-semibold mb-3 flex items-center">
-            <Star class="w-5 h-5 mr-2 text-yellow-500" />
-            常用标签
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <TagCard
-              v-for="tag in popularTags"
-              :key="tag.name"
-              :tag="tag"
-              @edit="editTag"
-              @delete="deleteTag"
-              @select="selectTag"
-            />
+        <div v-if="popularTags.length > 0" class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold flex items-center">
+              <Star class="w-5 h-5 mr-2 text-yellow-500" />
+              常用标签
+            </h3>
+            <div v-if="popularTags.length > 3" class="flex items-center text-sm text-muted-foreground">
+              <span class="mr-2">滑动查看更多</span>
+              <ArrowRight class="w-4 h-4" />
+            </div>
+          </div>
+          <div class="relative">
+            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide scroll-smooth">
+              <div 
+                v-for="tag in popularTags" 
+                :key="tag.name"
+                class="flex-shrink-0 w-64"
+              >
+                <TagCard
+                  :tag="tag"
+                  @edit="editTag"
+                  @delete="deleteTag"
+                  @select="selectTag"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -176,25 +181,6 @@
           <div v-else class="text-center py-8">
             <p class="text-gray-500">没有找到匹配的标签</p>
             <p class="text-sm text-gray-400 mt-1">尝试调整搜索条件或创建新标签</p>
-          </div>
-        </div>
-
-        <!-- 未使用标签 -->
-        <div v-if="unusedTags.length > 0">
-          <h3 class="text-lg font-semibold mb-3 flex items-center text-orange-600">
-            <AlertTriangle class="w-5 h-5 mr-2" />
-            未使用标签
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <TagCard
-              v-for="tag in unusedTags"
-              :key="tag.name"
-              :tag="tag"
-              variant="warning"
-              @edit="editTag"
-              @delete="deleteTag"
-              @select="selectTag"
-            />
           </div>
         </div>
       </template>
@@ -484,42 +470,18 @@
         </Button>
       </div>
 
-      <div v-if="filteredBookmarks.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
-          v-for="bookmark in filteredBookmarks"
-          :key="bookmark.id"
-          class="p-4 border rounded-lg hover:shadow-md transition-shadow bg-white"
-        >
-          <div class="flex items-start justify-between">
-            <div class="flex-1 min-w-0">
-              <h3 class="font-medium text-sm truncate">{{ bookmark.title }}</h3>
-              <p class="text-xs text-muted-foreground truncate mt-1">{{ bookmark.url }}</p>
-              <div v-if="bookmark.tags" class="flex flex-wrap gap-1 mt-2">
-                <span
-                  v-for="tag in bookmark.tags"
-                  :key="tag"
-                  class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                >
-                  {{ tag }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="text-center py-8">
-        <div class="max-w-md mx-auto">
-          <BookmarkIcon class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 mb-2">没有找到书签</h3>
-          <p class="text-gray-500">
-            此标签下暂无书签，或书签已被删除。
-          </p>
-          <Button @click="clearTagSelection" variant="outline" class="mt-4">
-            返回标签管理
-          </Button>
-        </div>
-      </div>
+      <!-- 使用 BookmarkGrid 组件显示书签 -->
+      <BookmarkGrid
+        :filtered-bookmarks="filteredBookmarks"
+        :bookmark-folders="[]"
+        :search-query="''"
+        :layout="'grid'"
+        :loading="false"
+        @add-bookmark="emit('add-bookmark')"
+        @open-bookmark="emit('open-bookmark', $event)"
+        @edit-bookmark="emit('edit-bookmark', $event)"
+        @delete-bookmark="emit('delete-bookmark', $event)"
+      />
     </div>
 
     <!-- AI 一键整理对话框 -->
@@ -717,11 +679,106 @@
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- 去重标签确认对话框 -->
+    <Dialog :open="deduplicateState.showConfirmDialog" @update:open="deduplicateState.showConfirmDialog = $event">
+      <DialogContent class="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle class="flex items-center">
+            <RefreshCw class="w-5 h-5 mr-2 text-orange-500" />
+            确认去重标签
+          </DialogTitle>
+          <DialogDescription>
+            此操作将会：
+            <ul class="list-disc list-inside mt-2 space-y-1">
+              <li>合并名称相同的重复标签</li>
+              <li>保留使用次数最多的标签</li>
+              <li>合并标签关联的书签</li>
+            </ul>
+            <p class="mt-2 text-sm text-orange-600">
+              ⚠️ 此操作不可撤销，请确认后继续。
+            </p>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            @click="deduplicateState.showConfirmDialog = false"
+          >
+            取消
+          </Button>
+          <Button 
+            @click="performDeduplication"
+            :disabled="deduplicateState.isDeduplicating"
+          >
+            <RefreshCw :class="['w-4 h-4 mr-2', deduplicateState.isDeduplicating ? 'animate-spin' : '']" />
+            {{ deduplicateState.isDeduplicating ? '正在去重...' : '开始去重' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- 去重结果对话框 -->
+    <Dialog :open="deduplicateState.showResultDialog" @update:open="deduplicateState.showResultDialog = $event">
+      <DialogContent class="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle class="flex items-center">
+            <RefreshCw class="w-5 h-5 mr-2 text-green-500" />
+            去重完成
+          </DialogTitle>
+          <DialogDescription>
+            <div v-if="deduplicateState.result" class="space-y-2">
+              <div class="flex items-center justify-between py-2 border-b">
+                <span>删除重复标签：</span>
+                <span class="font-medium">{{ deduplicateState.result.removedCount }} 个</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b">
+                <span>合并重复关系：</span>
+                <span class="font-medium">{{ deduplicateState.result.mergedRelations }} 个</span>
+              </div>
+              <div class="mt-4 p-3 bg-green-50 rounded-lg">
+                <p class="text-sm text-green-800">
+                  {{ deduplicateState.result.removedCount > 0 || deduplicateState.result.mergedRelations > 0 
+                     ? '✅ 去重操作已完成，标签数据已优化！' 
+                     : '✅ 未发现重复标签，您的数据已经很整洁了！' }}
+                </p>
+              </div>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button @click="deduplicateState.showResultDialog = false">
+            确定
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
+<style scoped>
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
+}
+
+/* 为横向滚动添加一些视觉增强 */
+.scrollbar-hide {
+  scroll-behavior: smooth;
+}
+
+/* 为标签卡片添加最小宽度，确保在横向滚动时有良好的显示效果 */
+.tag-card-container {
+  min-width: 256px; /* w-64 = 256px */
+}
+</style>
+
 <script setup lang="ts">
-import { ref, computed, onMounted, withDefaults } from 'vue';
+import { ref, computed, onMounted, withDefaults, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -729,6 +786,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import BookmarkGrid from '@/components/BookmarkGrid.vue';
 import {
   Plus,
   Tags,
@@ -742,7 +800,8 @@ import {
   X,
   Settings,
   Bot,
-  ArrowLeft
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-vue-next';
 import TagCard from '@/components/TagCard.vue';
 import { aiService } from '@/services/aiService';
@@ -757,6 +816,14 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   bookmarks: () => []
 });
+
+// 事件定义
+const emit = defineEmits<{
+  'add-bookmark': [];
+  'open-bookmark': [bookmark: Bookmark];
+  'edit-bookmark': [bookmark: Bookmark];
+  'delete-bookmark': [bookmark: Bookmark];
+}>();
 
 // 路由
 const router = useRouter();
@@ -801,12 +868,23 @@ const organizeProgress = ref({
   message: 'AI 正在分析书签并分配标签...'
 });
 
+// 去重标签状态
+const deduplicateState = ref({
+  isDeduplicating: false,
+  showConfirmDialog: false,
+  showResultDialog: false,
+  result: null as { removedCount: number; mergedRelations: number } | null
+});
+
 // 标签颜色选项
 const tagColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
   '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
   '#f97316', '#6366f1', '#14b8a6', '#e11d48'
 ];
+
+// 响应式数据存储增强后的书签
+const enhancedBookmarks = ref<Bookmark[]>([]);
 
 // 标签数据（从 props 获取或初始化为空数组）
 const allTags = ref<Tag[]>([]);
@@ -822,10 +900,6 @@ const untaggedBookmarksCount = computed(() => {
 
 const popularTags = computed(() => {
   return allTags.value.filter(tag => tag.usage >= 10).sort((a, b) => b.usage - a.usage);
-});
-
-const unusedTags = computed(() => {
-  return allTags.value.filter(tag => tag.usage === 0);
 });
 
 const filteredTags = computed(() => {
@@ -1274,27 +1348,36 @@ const confirmAITags = async () => {
   }
 };
 
-// 去重标签
-const deduplicateTags = async () => {
+// 去重标签 - 执行去重操作
+const performDeduplication = async () => {
+  deduplicateState.value.isDeduplicating = true;
+  
   try {
     const result = await tagStorageService.deduplicateTags();
-
+    
     // 重新加载标签数据
     await loadTags();
-
-    // 显示结果
-    if (result.removedCount > 0 || result.mergedRelations > 0) {
-      console.log(`去重完成！删除了 ${result.removedCount} 个重复标签，合并了 ${result.mergedRelations} 个重复关系`);
-    } else {
-      console.log('没有发现重复标签');
-    }
+    
+    // 保存结果并显示结果对话框
+    deduplicateState.value.result = result;
+    deduplicateState.value.showConfirmDialog = false;
+    deduplicateState.value.showResultDialog = true;
+    
   } catch (error) {
     console.error('去重标签失败:', error);
+    // 这里可以添加错误提示
+  } finally {
+    deduplicateState.value.isDeduplicating = false;
   }
 };
 
 // 标签操作方法
-const selectTag = (tag: Tag) => {
+const selectTag = async (tag: Tag) => {
+  // 如果增强书签为空，先加载标签
+  if (enhancedBookmarks.value.length === 0 && props.bookmarks.length > 0) {
+    await loadBookmarkTags();
+  }
+  
   selectedTag.value = tag.name;
   showTagBookmarks.value = true;
 };
@@ -1308,9 +1391,20 @@ const clearTagSelection = () => {
 const filteredBookmarks = computed(() => {
   const tagName = selectedTag.value;
   if (!tagName) return [];
-  return props.bookmarks.filter(bookmark =>
-    bookmark.tags && bookmark.tags.includes(tagName)
-  );
+  
+  // 使用增强后的书签数据进行筛选
+  const booksToFilter = bookmarksWithTags.value;
+  
+  return booksToFilter.filter(bookmark => {
+    const hasTags = bookmark.tags && Array.isArray(bookmark.tags) && bookmark.tags.length > 0;
+    return hasTags && bookmark.tags!.includes(tagName);
+  });
+});
+
+// 计算属性 - 增强的书签数据（包含标签）
+const bookmarksWithTags = computed(() => {
+  // 优先使用增强后的书签数据，如果为空则使用原始数据
+  return enhancedBookmarks.value.length > 0 ? enhancedBookmarks.value : props.bookmarks;
 });
 
 // 加载标签数据
@@ -1325,9 +1419,38 @@ const loadTags = async () => {
   }
 };
 
+// 为书签加载标签
+const loadBookmarkTags = async () => {
+  try {
+    // 为每个书签加载标签
+    const bookmarksWithLoadedTags = await Promise.all(
+      props.bookmarks.map(async (bookmark) => {
+        const tags = await tagStorageService.getTagsForBookmark(bookmark.id);
+        return {
+          ...bookmark,
+          tags: tags.map(tag => tag.name) // 只存储标签名称
+        };
+      })
+    );
+    
+    enhancedBookmarks.value = bookmarksWithLoadedTags;
+    
+  } catch (error) {
+    console.error('为书签加载标签失败:', error);
+  }
+};
+
+// 监听书签数据变化，重新加载标签
+watch(() => props.bookmarks, async (newBookmarks) => {
+  if (newBookmarks && newBookmarks.length > 0) {
+    await loadBookmarkTags();
+  }
+}, { immediate: true });
+
 onMounted(async () => {
-  // 组件挂载时加载标签数据
-  console.log('标签管理页面已加载');
   await loadTags();
+  if (props.bookmarks.length > 0) {
+    await loadBookmarkTags();
+  }
 });
 </script>
