@@ -17,6 +17,7 @@
         <div class="flex flex-1 overflow-hidden">
           <!-- 侧边栏 -->
           <Sidebar
+            v-if="$route.path === '/'"
             :bookmarks="bookmarks"
             :bookmark-folders="bookmarkFolders"
             :selected-folder="selectedFolder"
