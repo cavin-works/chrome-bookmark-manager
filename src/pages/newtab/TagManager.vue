@@ -1,464 +1,45 @@
 <template>
   <div class="p-6 space-y-6">
-    <!-- 页面标题 -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold">标签管理</h1>
-        <p class="text-muted-foreground mt-1">管理和组织您的书签标签</p>
-      </div>
-      <div class="flex items-center space-x-2">
-        <Button 
-          @click="deduplicateState.showConfirmDialog = true" 
-          variant="outline" 
-          size="sm" 
-          :disabled="allTags.length === 0 || deduplicateState.isDeduplicating"
-        >
-          <RefreshCw :class="['w-4 h-4 mr-2', deduplicateState.isDeduplicating ? 'animate-spin' : '']" />
-          {{ deduplicateState.isDeduplicating ? '正在去重...' : '去重标签' }}
-        </Button>
-        <Button @click="showAIOrganize = true" variant="outline" :disabled="untaggedBookmarksCount === 0">
-          <Bot class="w-4 h-4 mr-2" />
-          AI一键整理
-        </Button>
-        <Button @click="showAIGenerate = true" variant="outline">
-          <Sparkles class="w-4 h-4 mr-2" />
-          AI 生成标签
-        </Button>
-        <Button @click="showCreateTag = true">
-          <Plus class="w-4 h-4 mr-2" />
-          新建标签
-        </Button>
-      </div>
-    </div>
+    <!-- 页面标题和按钮 -->
+    <TagManagerHeader
+      :can-deduplicate="allTags.length > 0"
+      :is-deduplicating="deduplication.isDeduplicating"
+      :can-organize="true"
+      :untagged-count="untaggedCount"
+      @deduplicate="openDeduplicateDialog"
+      @ai-organize="openAIOrganizeDialog"
+      @ai-generate="openAIGenerateDialog"
+      @create-tag="openCreateTagDialog"
+    />
 
     <!-- 统计信息 -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <Card>
-        <CardContent class="p-6">
-          <div class="flex items-center space-x-2">
-            <Tags class="w-5 h-5 text-primary" />
-            <div>
-              <p class="text-sm font-medium">总标签数</p>
-              <p class="text-2xl font-bold">{{ allTags.length }}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent class="p-6">
-          <div class="flex items-center space-x-2">
-            <BookmarkIcon class="w-5 h-5 text-blue-500" />
-            <div>
-              <p class="text-sm font-medium">已标记书签</p>
-              <p class="text-2xl font-bold">{{ taggedBookmarksCount }}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent class="p-6">
-          <div class="flex items-center space-x-2">
-            <BookmarkIcon class="w-5 h-5 text-orange-500" />
-            <div>
-              <p class="text-sm font-medium">未标签书签</p>
-              <p class="text-2xl font-bold">{{ untaggedBookmarksCount }}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent class="p-6">
-          <div class="flex items-center space-x-2">
-            <TrendingUp class="w-5 h-5 text-green-500" />
-            <div>
-              <p class="text-sm font-medium">常用标签</p>
-              <p class="text-2xl font-bold">{{ popularTags.length }}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-
-    <!-- 搜索和过滤 -->
-    <div v-if="allTags.length > 0" class="flex flex-col sm:flex-row gap-4">
-      <div class="flex-1">
-        <Input
-          v-model="searchQuery"
-          placeholder="搜索标签..."
-          class="w-full"
-        >
-          <template #prefix>
-            <Search class="w-4 h-4" />
-          </template>
-        </Input>
-      </div>
-      <Select v-model="sortBy">
-        <SelectTrigger class="w-48">
-          <SelectValue placeholder="排序方式" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="name">按名称</SelectItem>
-          <SelectItem value="usage">按使用次数</SelectItem>
-          <SelectItem value="created">按创建时间</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+    <TagStatistics
+      :total-tags="allTags.length"
+      :tagged-bookmarks-count="taggedBookmarksCount"
+      :untagged-bookmarks-count="untaggedCount"
+      :popular-tags-count="popularTags.length"
+    />
 
     <!-- 标签列表 -->
-    <div v-if="!showTagBookmarks" class="space-y-4">
-      <!-- 空状态 - 没有标签时显示 -->
-      <div v-if="allTags.length === 0" class="text-center py-12">
-        <div class="max-w-md mx-auto">
-          <Tags class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 class="text-xl font-semibold text-gray-900 mb-2">还没有创建标签</h3>
-          <p class="text-gray-500 mb-6">
-            标签可以帮助您更好地组织和管理书签。可以试试 AI 自动生成哦~~
-          </p>
-          <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button @click="showAIGenerate = true" class="flex items-center">
-              <Sparkles class="w-4 h-4 mr-2" />
-              AI 智能生成标签
-            </Button>
-            <Button variant="outline" @click="showCreateTag = true" class="flex items-center">
-              <Plus class="w-4 h-4 mr-2" />
-              手动创建标签
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 有标签时显示标签列表 -->
-      <template v-else>
-        <!-- 常用标签 -->
-        <div v-if="popularTags.length > 0" class="mb-6">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-semibold flex items-center">
-              <Star class="w-5 h-5 mr-2 text-yellow-500" />
-              常用标签
-            </h3>
-            <div v-if="popularTags.length > 3" class="flex items-center text-sm text-muted-foreground">
-              <span class="mr-2">滑动查看更多</span>
-              <ArrowRight class="w-4 h-4" />
-            </div>
-          </div>
-          <div class="relative">
-            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide scroll-smooth">
-              <div 
-                v-for="tag in popularTags" 
-                :key="tag.name"
-                class="flex-shrink-0 w-64"
-              >
-                <TagCard
-                  :tag="tag"
-                  @edit="editTag"
-                  @delete="deleteTag"
-                  @select="selectTag"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 所有标签 -->
-        <div>
-          <h3 class="text-lg font-semibold mb-3 flex items-center">
-            <Tags class="w-5 h-5 mr-2" />
-            所有标签 ({{ filteredTags.length }})
-          </h3>
-          <div v-if="filteredTags.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <TagCard
-              v-for="tag in filteredTags"
-              :key="tag.name"
-              :tag="tag"
-              @edit="editTag"
-              @delete="deleteTag"
-              @select="selectTag"
-            />
-          </div>
-          <div v-else class="text-center py-8">
-            <p class="text-gray-500">没有找到匹配的标签</p>
-            <p class="text-sm text-gray-400 mt-1">尝试调整搜索条件或创建新标签</p>
-          </div>
-        </div>
-      </template>
-    </div>
-
-    <!-- 创建标签对话框 -->
-    <Dialog :open="showCreateTag" @update:open="showCreateTag = $event">
-      <DialogContent class="sm:max-w-[500px] max-h-[90vh] flex flex-col">
-        <DialogHeader class="flex-shrink-0">
-          <DialogTitle>创建新标签</DialogTitle>
-          <DialogDescription>
-            为您的书签创建一个新的标签分类
-          </DialogDescription>
-        </DialogHeader>
-        <div class="flex-1 overflow-y-auto">
-          <div class="space-y-4 py-4">
-            <div class="space-y-2">
-              <label class="text-sm font-medium">标签名称</label>
-              <Input
-                v-model="newTagName"
-                placeholder="输入标签名称"
-                @keyup.enter="createTag"
-                class="w-full"
-              />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">颜色</label>
-              <div class="grid grid-cols-6 gap-2">
-                <button
-                  v-for="color in tagColors"
-                  :key="color"
-                  :class="cn(
-                    'w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform',
-                    newTagColor === color ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'
-                  )"
-                  :style="{ backgroundColor: color }"
-                  @click="newTagColor = color"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">描述（可选）</label>
-              <Input
-                v-model="newTagDescription"
-                placeholder="标签描述"
-                class="w-full"
-              />
-            </div>
-          </div>
-        </div>
-        <DialogFooter class="flex-shrink-0">
-          <Button variant="outline" @click="showCreateTag = false">取消</Button>
-          <Button @click="createTag" :disabled="!newTagName.trim()">创建</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <!-- 编辑标签对话框 -->
-    <Dialog :open="showEditTag" @update:open="showEditTag = $event">
-      <DialogContent class="sm:max-w-[500px] max-h-[90vh] flex flex-col">
-        <DialogHeader class="flex-shrink-0">
-          <DialogTitle>编辑标签</DialogTitle>
-          <DialogDescription>
-            修改标签的名称、颜色和描述
-          </DialogDescription>
-        </DialogHeader>
-        <div class="flex-1 overflow-y-auto">
-          <div class="space-y-4 py-4" v-if="editingTag">
-            <div class="space-y-2">
-              <label class="text-sm font-medium">标签名称</label>
-              <Input
-                v-model="editingTag.name"
-                placeholder="输入标签名称"
-                class="w-full"
-              />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">颜色</label>
-              <div class="grid grid-cols-6 gap-2">
-                <button
-                  v-for="color in tagColors"
-                  :key="color"
-                  :class="cn(
-                    'w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform',
-                    editingTag.color === color ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'
-                  )"
-                  :style="{ backgroundColor: color }"
-                  @click="editingTag.color = color"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">描述</label>
-              <Input
-                v-model="editingTag.description"
-                placeholder="标签描述"
-                class="w-full"
-              />
-            </div>
-          </div>
-        </div>
-        <DialogFooter class="flex-shrink-0">
-          <Button variant="outline" @click="showEditTag = false">取消</Button>
-          <Button @click="saveTag">保存</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <!-- AI 生成标签对话框 -->
-    <Dialog :open="showAIGenerate" @update:open="showAIGenerate = $event">
-      <DialogContent class="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-        <DialogHeader class="flex-shrink-0">
-          <DialogTitle class="flex items-center">
-            <Sparkles class="w-5 h-5 mr-2" />
-            AI 智能生成标签
-          </DialogTitle>
-          <DialogDescription>
-            基于您现有的书签，AI 将为您推荐合适的标签。您可以选择需要的标签并继续生成更多选项。
-            <br>
-            <span class="text-sm text-muted-foreground">
-              当前可分析书签数量: {{ props.bookmarks.length }} 个
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div class="flex-1 overflow-y-auto">
-          <div class="space-y-4 py-4">
-            <!-- AI 状态显示 -->
-            <div v-if="aiGenerating" class="flex items-center justify-center py-8">
-              <div class="flex items-center space-x-2 text-primary">
-                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                <span>AI 正在分析您的书签并生成标签...</span>
-              </div>
-            </div>
-
-            <!-- 推荐标签列表 -->
-            <div v-else-if="recommendedTags.length > 0" class="space-y-4">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">推荐的标签 ({{ recommendedTags.length }})</h3>
-                <div class="flex items-center space-x-2">
-                  <Button
-                    @click="selectAllRecommended"
-                    variant="outline"
-                    size="sm"
-                  >
-                    全选
-                  </Button>
-                  <Button
-                    @click="clearAllRecommended"
-                    variant="outline"
-                    size="sm"
-                  >
-                    清空
-                  </Button>
-                  <Button
-                    @click="regenerateAITags"
-                    variant="outline"
-                    size="sm"
-                    :disabled="aiGenerating"
-                  >
-                    <RefreshCw class="w-3 h-3 mr-1" />
-                    换一批
-                  </Button>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                <label
-                  v-for="tag in recommendedTags"
-                  :key="tag"
-                  class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                  :class="{
-                    'bg-primary/10 border-primary': selectedRecommendedTags.includes(tag),
-                    'border-gray-200': !selectedRecommendedTags.includes(tag)
-                  }"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="selectedRecommendedTags.includes(tag)"
-                    @change="toggleRecommendedTag(tag)"
-                    class="rounded"
-                  />
-                  <span class="text-sm font-medium">{{ tag }}</span>
-                </label>
-              </div>
-
-              <div v-if="selectedRecommendedTags.length > 0" class="p-3 bg-blue-50 rounded-lg">
-                <p class="text-sm text-blue-700 mb-2">
-                  已选择 {{ selectedRecommendedTags.length }} 个标签:
-                </p>
-                <div class="flex flex-wrap gap-1">
-                  <span
-                    v-for="tag in selectedRecommendedTags"
-                    :key="tag"
-                    class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                  >
-                    {{ tag }}
-                    <button
-                      @click="removeSelectedTag(tag)"
-                      class="ml-1 hover:text-blue-600"
-                    >
-                      <X class="w-3 h-3" />
-                    </button>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- AI 配置错误状态 -->
-            <div v-else-if="aiConfigError" class="text-center py-8">
-              <div class="max-w-md mx-auto">
-                <AlertTriangle class="w-12 h-12 text-orange-500 mx-auto mb-4" />
-                <h3 class="text-lg font-medium text-gray-900 mb-2">AI 配置不完整</h3>
-                <p class="text-gray-500 mb-4">
-                  {{ aiConfigError }}
-                </p>
-                <div class="space-y-2">
-                  <Button @click="router.push('/settings')" variant="outline" class="w-full">
-                    <Settings class="w-4 h-4 mr-2" />
-                    前往设置页面
-                  </Button>
-                  <Button @click="retryAIGeneration" variant="ghost" size="sm">
-                    重新检查配置
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <!-- 空状态 -->
-            <div v-else-if="!aiGenerating" class="text-center py-8">
-              <Sparkles class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 class="text-lg font-medium text-gray-900 mb-2">开始生成标签</h3>
-              <p class="text-gray-500 mb-2">
-                点击下方按钮，AI 将分析您的书签并推荐合适的标签
-              </p>
-              <p class="text-sm text-muted-foreground">
-                可分析书签数量: {{ props.bookmarks.length }} 个
-                {{ props.bookmarks.length === 0 ? '（暂无书签数据）' : '' }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter class="flex-shrink-0">
-          <div class="flex items-center justify-between w-full">
-            <div class="flex items-center space-x-2">
-              <Button
-                @click="generateAITags"
-                variant="outline"
-                :disabled="aiGenerating || props.bookmarks.length === 0"
-              >
-                <Sparkles class="w-4 h-4 mr-2" />
-                {{ recommendedTags.length > 0 ? '重新生成' : '开始生成' }}
-              </Button>
-            </div>
-            <div class="flex items-center space-x-2">
-              <Button variant="outline" @click="showAIGenerate = false">
-                取消
-              </Button>
-              <Button
-                @click="confirmAITags"
-                :disabled="selectedRecommendedTags.length === 0"
-              >
-                创建选中标签 ({{ selectedRecommendedTags.length }})
-              </Button>
-            </div>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <TagList
+      v-if="!selectedTagName"
+      :tags="filteredTags"
+      :popular-tags="popularTags"
+      :show-filters="true"
+      @edit-tag="openEditTagDialog"
+      @delete-tag="handleDeleteTag"
+      @select-tag="selectTag"
+      @create-tag="openCreateTagDialog"
+      @ai-generate="openAIGenerateDialog"
+    />
 
     <!-- 标签书签展示区域 -->
-    <div v-if="showTagBookmarks" class="space-y-4">
+    <div v-if="selectedTagName" class="space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg font-semibold flex items-center">
             <Tags class="w-5 h-5 mr-2" />
-            "{{ selectedTag }}" 标签的书签
+            "{{ selectedTagName }}" 标签的书签
           </h2>
           <p class="text-sm text-muted-foreground">
             共 {{ filteredBookmarks.length }} 个书签使用了此标签
@@ -470,343 +51,87 @@
         </Button>
       </div>
 
-      <!-- 使用 BookmarkGrid 组件显示书签 -->
       <BookmarkGrid
         :filtered-bookmarks="filteredBookmarks"
         :bookmark-folders="[]"
         :search-query="''"
         :layout="'grid'"
         :loading="false"
-        @add-bookmark="emit('add-bookmark')"
-        @open-bookmark="emit('open-bookmark', $event)"
-        @edit-bookmark="emit('edit-bookmark', $event)"
-        @delete-bookmark="emit('delete-bookmark', $event)"
+        @add-bookmark="$emit('add-bookmark')"
+        @open-bookmark="$emit('open-bookmark', $event)"
+        @edit-bookmark="$emit('edit-bookmark', $event)"
+        @delete-bookmark="$emit('delete-bookmark', $event)"
       />
     </div>
 
+    <!-- 创建标签对话框 -->
+    <CreateTagDialog
+      v-model:open="dialogs.showCreateTag"
+      @confirm="handleCreateTag"
+    />
+
+    <!-- 编辑标签对话框 -->
+    <EditTagDialog
+      v-model:open="dialogs.showEditTag"
+      :tag="editingTag"
+      @confirm="handleUpdateTag"
+    />
+
+    <!-- AI 生成标签对话框 -->
+    <AIGenerateTagsDialog
+      v-model:open="dialogs.showAIGenerate"
+      :bookmarks="bookmarks"
+      :existing-tags="allTags.map(t => t.name)"
+      @confirm="handleAIGeneratedTags"
+    />
+
     <!-- AI 一键整理对话框 -->
-    <Dialog :open="showAIOrganize" @update:open="showAIOrganize = $event">
-      <DialogContent class="sm:max-w-[700px] max-h-[90vh] flex flex-col">
-        <DialogHeader class="flex-shrink-0">
-          <DialogTitle class="flex items-center">
-            <Bot class="w-5 h-5 mr-2" />
-            AI 一键整理书签
-          </DialogTitle>
-          <DialogDescription>
-            AI 将自动为您的书签分配合适的标签，优先使用现有标签，必要时推荐新标签。
-            <br>
-            <span class="text-sm text-muted-foreground">
-              待整理书签数量: {{ untaggedBookmarksCount }} 个 | 现有标签数量: {{ allTags.length }} 个
-            </span>
-            <br>
-            <span v-if="props.bookmarks.length > 30" class="text-xs text-orange-600">
-              💡 检测到大量书签，将自动分批处理以确保整理质量
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div class="flex-1 overflow-y-auto">
-          <div class="space-y-4 py-4">
-            <!-- AI 整理状态显示 -->
-            <div v-if="aiOrganizing" class="space-y-4">
-              <!-- 进度显示 -->
-              <div class="text-center py-4">
-                <div class="flex items-center justify-center space-x-2 text-primary mb-4">
-                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                  <span>{{ organizeProgress.message }}</span>
-                </div>
-
-                <!-- 进度条 -->
-                <div v-if="organizeProgress.total > 0" class="space-y-2">
-                  <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-primary h-2 rounded-full transition-all duration-300"
-                      :style="{ width: `${(organizeProgress.processed / organizeProgress.total) * 100}%` }"
-                    ></div>
-                  </div>
-                  <div class="text-sm text-muted-foreground">
-                    {{ organizeProgress.processed }} / {{ organizeProgress.total }} 个书签
-                    <span v-if="organizeProgress.currentBatch > 0">
-                      (第 {{ organizeProgress.currentBatch }} 批)
-                    </span>
-                  </div>
-                </div>
-
-                <!-- 批处理信息 -->
-                <div v-if="organizeProgress.totalBatches > 1" class="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <p class="text-sm text-blue-700">
-                    检测到大量书签({{ organizeProgress.total }}个)，正在分批处理以确保质量
-                  </p>
-                  <p class="text-xs text-blue-600 mt-1">
-                    每批处理 {{ organizeProgress.batchSize }} 个书签，共 {{ organizeProgress.totalBatches }} 批
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- AI 配置错误状态 -->
-            <div v-else-if="organizeConfigError" class="text-center py-8">
-              <div class="max-w-md mx-auto">
-                <AlertTriangle class="w-12 h-12 text-orange-500 mx-auto mb-4" />
-                <h3 class="text-lg font-medium text-gray-900 mb-2">AI 配置不完整</h3>
-                <p class="text-gray-500 mb-4">
-                  {{ organizeConfigError }}
-                </p>
-                <div class="space-y-2">
-                  <Button @click="router.push('/settings')" variant="outline" class="w-full">
-                    <Settings class="w-4 h-4 mr-2" />
-                    前往设置页面
-                  </Button>
-                  <Button @click="retryAIOrganize" variant="ghost" size="sm">
-                    重新检查配置
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <!-- 整理结果显示 -->
-            <div v-else-if="organizeResult" class="space-y-6">
-              <!-- 新标签推荐 -->
-              <div v-if="organizeResult.newTags.length > 0" class="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h3 class="text-sm font-medium text-blue-900 mb-3 flex items-center">
-                  <Plus class="w-4 h-4 mr-2" />
-                  推荐新增标签 ({{ organizeResult.newTags.length }} 个)
-                </h3>
-                <div class="flex flex-wrap gap-2 mb-3">
-                  <span
-                    v-for="tag in organizeResult.newTags"
-                    :key="tag"
-                    class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 border border-blue-300"
-                  >
-                    {{ tag }}
-                  </span>
-                </div>
-                <p class="text-xs text-blue-700">
-                  这些标签将在确认整理后自动创建
-                </p>
-              </div>
-
-              <!-- 书签标签分配预览 -->
-              <div>
-                <h3 class="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                  <Tags class="w-4 h-4 mr-2" />
-                  标签分配预览 ({{ Object.keys(organizeResult.assignments).length }} 个书签)
-                </h3>
-                <div class="max-h-60 overflow-y-auto space-y-2">
-                  <div
-                    v-for="(tags, bookmarkId) in organizeResult.assignments"
-                    :key="bookmarkId"
-                    class="p-3 bg-gray-50 rounded-lg border"
-                  >
-                    <div class="flex items-start justify-between">
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">
-                          {{ getBookmarkById(String(bookmarkId))?.title || '未知书签' }}
-                        </p>
-                        <p class="text-xs text-gray-500 truncate mt-1">
-                          {{ getBookmarkById(String(bookmarkId))?.url || '' }}
-                        </p>
-                      </div>
-                      <div class="flex flex-wrap gap-1 ml-3">
-                        <span
-                          v-for="tag in tags"
-                          :key="tag"
-                          class="inline-flex items-center px-2 py-1 rounded-full text-xs"
-                          :class="allTags.some(t => t.name === tag)
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : 'bg-orange-100 text-orange-800 border border-orange-300'"
-                        >
-                          {{ tag }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 统计信息 -->
-              <div class="grid grid-cols-2 gap-4 text-center">
-                <div class="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div class="text-2xl font-bold text-green-600">{{ Object.keys(organizeResult.assignments).length }}</div>
-                  <div class="text-sm text-green-700">将被分配标签的书签</div>
-                </div>
-                <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div class="text-2xl font-bold text-blue-600">{{ organizeResult.newTags.length }}</div>
-                  <div class="text-sm text-blue-700">推荐新增的标签</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 空状态 -->
-            <div v-else-if="!aiOrganizing" class="text-center py-8">
-              <Bot class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 class="text-lg font-medium text-gray-900 mb-2">开始智能整理</h3>
-              <p class="text-gray-500 mb-2">
-                AI 将分析您的书签内容，自动分配合适的标签
-              </p>
-              <p class="text-sm text-muted-foreground">
-                待整理书签: {{ untaggedBookmarksCount }} 个
-                {{ untaggedBookmarksCount === 0 ? '（暂无未标签书签）' : '' }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter class="flex-shrink-0">
-          <div class="flex items-center justify-between w-full">
-            <div class="flex items-center space-x-2">
-              <Button
-                @click="startAIOrganize"
-                variant="outline"
-                :disabled="aiOrganizing || untaggedBookmarksCount === 0"
-              >
-                <Bot class="w-4 h-4 mr-2" />
-                {{ organizeResult ? '重新分析' : '开始整理' }}
-              </Button>
-            </div>
-            <div class="flex items-center space-x-2">
-              <Button variant="outline" @click="showAIOrganize = false">
-                取消
-              </Button>
-              <Button
-                @click="confirmAIOrganize"
-                :disabled="!organizeResult || Object.keys(organizeResult.assignments).length === 0"
-              >
-                确认整理 ({{ organizeResult ? Object.keys(organizeResult.assignments).length : 0 }} 个书签)
-              </Button>
-            </div>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <AIOrganizeDialog
+      v-model:open="dialogs.showAIOrganize"
+      :bookmarks="bookmarks"
+      :existing-tags="allTags.map(t => t.name)"
+      @confirm="handleAIOrganizeResult"
+    />
 
     <!-- 去重标签确认对话框 -->
-    <Dialog :open="deduplicateState.showConfirmDialog" @update:open="deduplicateState.showConfirmDialog = $event">
-      <DialogContent class="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle class="flex items-center">
-            <RefreshCw class="w-5 h-5 mr-2 text-orange-500" />
-            确认去重标签
-          </DialogTitle>
-          <DialogDescription>
-            此操作将会：
-            <ul class="list-disc list-inside mt-2 space-y-1">
-              <li>合并名称相同的重复标签</li>
-              <li>保留使用次数最多的标签</li>
-              <li>合并标签关联的书签</li>
-            </ul>
-            <p class="mt-2 text-sm text-orange-600">
-              ⚠️ 此操作不可撤销，请确认后继续。
-            </p>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            @click="deduplicateState.showConfirmDialog = false"
-          >
-            取消
-          </Button>
-          <Button 
-            @click="performDeduplication"
-            :disabled="deduplicateState.isDeduplicating"
-          >
-            <RefreshCw :class="['w-4 h-4 mr-2', deduplicateState.isDeduplicating ? 'animate-spin' : '']" />
-            {{ deduplicateState.isDeduplicating ? '正在去重...' : '开始去重' }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <DeduplicateConfirmDialog
+      v-model:open="deduplication.showConfirmDialog"
+      @confirm="handleDeduplicate"
+    />
 
     <!-- 去重结果对话框 -->
-    <Dialog :open="deduplicateState.showResultDialog" @update:open="deduplicateState.showResultDialog = $event">
-      <DialogContent class="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle class="flex items-center">
-            <RefreshCw class="w-5 h-5 mr-2 text-green-500" />
-            去重完成
-          </DialogTitle>
-          <DialogDescription>
-            <div v-if="deduplicateState.result" class="space-y-2">
-              <div class="flex items-center justify-between py-2 border-b">
-                <span>删除重复标签：</span>
-                <span class="font-medium">{{ deduplicateState.result.removedCount }} 个</span>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b">
-                <span>合并重复关系：</span>
-                <span class="font-medium">{{ deduplicateState.result.mergedRelations }} 个</span>
-              </div>
-              <div class="mt-4 p-3 bg-green-50 rounded-lg">
-                <p class="text-sm text-green-800">
-                  {{ deduplicateState.result.removedCount > 0 || deduplicateState.result.mergedRelations > 0 
-                     ? '✅ 去重操作已完成，标签数据已优化！' 
-                     : '✅ 未发现重复标签，您的数据已经很整洁了！' }}
-                </p>
-              </div>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button @click="deduplicateState.showResultDialog = false">
-            确定
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <DeduplicateResultDialog
+      v-model:open="deduplication.showResultDialog"
+      :result="deduplication.result"
+      @close="deduplication.resetState"
+    />
   </div>
 </template>
 
-<style scoped>
-.scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari and Opera */
-}
-
-/* 为横向滚动添加一些视觉增强 */
-.scrollbar-hide {
-  scroll-behavior: smooth;
-}
-
-/* 为标签卡片添加最小宽度，确保在横向滚动时有良好的显示效果 */
-.tag-card-container {
-  min-width: 256px; /* w-64 = 256px */
-}
-</style>
-
 <script setup lang="ts">
-import { ref, computed, onMounted, withDefaults, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { ref, computed, reactive, watch } from 'vue';
+import { useTags } from '@/composables/useTags';
+import { useAITags } from '@/composables/useAITags';
+import { useTagOrganizer } from '@/composables/useTagOrganizer';
+import { useTagDeduplication } from '@/composables/useTagDeduplication';
+
+// 组件导入
+import TagManagerHeader from '@/components/TagManagerHeader.vue';
+import TagStatistics from '@/components/TagStatistics.vue';
+import TagList from '@/components/TagList.vue';
 import BookmarkGrid from '@/components/BookmarkGrid.vue';
-import {
-  Plus,
-  Tags,
-  Bookmark as BookmarkIcon,
-  TrendingUp,
-  AlertTriangle,
-  Search,
-  Star,
-  Sparkles,
-  RefreshCw,
-  X,
-  Settings,
-  Bot,
-  ArrowLeft,
-  ArrowRight
-} from 'lucide-vue-next';
-import TagCard from '@/components/TagCard.vue';
-import { aiService } from '@/services/aiService';
-import { tagStorageService, type Tag } from '@/services/tagStorageService';
+
+// 对话框组件
+import CreateTagDialog from '@/components/dialogs/CreateTagDialog.vue';
+import EditTagDialog from '@/components/dialogs/EditTagDialog.vue';
+import AIGenerateTagsDialog from '@/components/dialogs/AIGenerateTagsDialog.vue';
+import AIOrganizeDialog from '@/components/dialogs/AIOrganizeDialog.vue';
+import DeduplicateConfirmDialog from '@/components/dialogs/DeduplicateConfirmDialog.vue';
+import DeduplicateResultDialog from '@/components/dialogs/DeduplicateResultDialog.vue';
+
+// 类型定义
 import type { Bookmark } from '@/utils/types';
+import type { Tag } from '@/services/tagStorageService';
 
 // Props 定义
 interface Props {
@@ -817,7 +142,6 @@ const props = withDefaults(defineProps<Props>(), {
   bookmarks: () => []
 });
 
-// 事件定义
 const emit = defineEmits<{
   'add-bookmark': [];
   'open-bookmark': [bookmark: Bookmark];
@@ -825,632 +149,139 @@ const emit = defineEmits<{
   'delete-bookmark': [bookmark: Bookmark];
 }>();
 
-// 路由
-const router = useRouter();
-
-// 响应式状态
-const searchQuery = ref('');
-const sortBy = ref('usage');
-const showCreateTag = ref(false);
-const showEditTag = ref(false);
-const showAIGenerate = ref(false);
-const showAIOrganize = ref(false);
+// 状态管理
+const selectedTagName = ref<string | null>(null);
 const editingTag = ref<Tag | null>(null);
-const selectedTag = ref<string | null>(null);
-const showTagBookmarks = ref(false);
 
-// 新标签创建
-const newTagName = ref('');
-const newTagColor = ref('#3b82f6');
-const newTagDescription = ref('');
-
-// AI 生成标签相关状态
-const aiGenerating = ref(false);
-const recommendedTags = ref<string[]>([]);
-const selectedRecommendedTags = ref<string[]>([]);
-const aiConfigError = ref('');
-
-// AI 整理书签相关状态
-const aiOrganizing = ref(false);
-const organizeResult = ref<{
-  assignments: { [bookmarkId: string]: string[] };
-  newTags: string[];
-} | null>(null);
-const organizeConfigError = ref('');
-
-// AI 整理进度状态
-const organizeProgress = ref({
-  processed: 0,
-  total: 0,
-  currentBatch: 0,
-  totalBatches: 0,
-  batchSize: 30,
-  message: 'AI 正在分析书签并分配标签...'
+// 对话框状态
+const dialogs = reactive({
+  showCreateTag: false,
+  showEditTag: false,
+  showAIGenerate: false,
+  showAIOrganize: false
 });
 
-// 去重标签状态
-const deduplicateState = ref({
-  isDeduplicating: false,
-  showConfirmDialog: false,
-  showResultDialog: false,
-  result: null as { removedCount: number; mergedRelations: number } | null
+// 使用 hooks
+const tagsHook = useTags({ 
+  bookmarks: props.bookmarks,
+  autoLoad: true 
 });
 
-// 标签颜色选项
-const tagColors = [
-  '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
-  '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
-  '#f97316', '#6366f1', '#14b8a6', '#e11d48'
-];
+const aiTagsHook = useAITags({ 
+  bookmarks: props.bookmarks,
+  existingTags: computed(() => tagsHook.allTags.value.map(t => t.name)).value
+});
 
-// 响应式数据存储增强后的书签
-const enhancedBookmarks = ref<Bookmark[]>([]);
+const tagOrganizerHook = useTagOrganizer({ 
+  bookmarks: props.bookmarks,
+  existingTags: computed(() => tagsHook.allTags.value.map(t => t.name)).value
+});
 
-// 标签数据（从 props 获取或初始化为空数组）
-const allTags = ref<Tag[]>([]);
+const deduplication = useTagDeduplication();
 
 // 计算属性
-const taggedBookmarksCount = computed(() => {
-  return allTags.value.reduce((total, tag) => total + tag.usage, 0);
-});
+const { allTags, taggedBookmarksCount, popularTags } = tagsHook;
+const { untaggedCount } = tagOrganizerHook;
 
-const untaggedBookmarksCount = computed(() => {
-  return props.bookmarks.filter(bookmark => !bookmark.tags || bookmark.tags.length === 0).length;
-});
-
-const popularTags = computed(() => {
-  return allTags.value.filter(tag => tag.usage >= 10).sort((a, b) => b.usage - a.usage);
-});
-
+// 过滤后的标签
 const filteredTags = computed(() => {
-  let result = allTags.value;
-
-  // 搜索过滤
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter(tag =>
-      tag.name.toLowerCase().includes(query) ||
-      tag.description?.toLowerCase().includes(query)
-    );
-  }
-
-  // 排序
-  switch (sortBy.value) {
-    case 'name':
-      result.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    case 'usage':
-      result.sort((a, b) => b.usage - a.usage);
-      break;
-    case 'created':
-      result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      break;
-  }
-
-  return result;
+  // 使用 tagsHook 的过滤逻辑，这里简单返回所有标签
+  return allTags.value;
 });
 
-// 标签操作方法
-const createTag = async () => {
-  if (!newTagName.value.trim()) return;
-
-  try {
-    const newTag = await tagStorageService.saveTag({
-      name: newTagName.value.trim(),
-      color: newTagColor.value,
-      description: newTagDescription.value.trim() || undefined,
-      usage: 0,
-      createdAt: new Date()
-    });
-
-    allTags.value.push(newTag);
-
-    // 重置表单
-    newTagName.value = '';
-    newTagColor.value = '#3b82f6';
-    newTagDescription.value = '';
-    showCreateTag.value = false;
-
-    console.log('标签创建成功:', newTag);
-  } catch (error: any) {
-    console.error('创建标签失败:', error);
-    // 这里可以添加错误提示
-  }
-};
-
-const editTag = (tag: Tag) => {
-  editingTag.value = { ...tag };
-  showEditTag.value = true;
-};
-
-const saveTag = async () => {
-  if (!editingTag.value) return;
-
-  try {
-    const updatedTag = await tagStorageService.updateTag(editingTag.value.id, {
-      name: editingTag.value.name,
-      color: editingTag.value.color,
-      description: editingTag.value.description
-    });
-
-    const index = allTags.value.findIndex(tag => tag.id === editingTag.value?.id);
-    if (index !== -1) {
-      allTags.value[index] = updatedTag;
-    }
-
-    showEditTag.value = false;
-    editingTag.value = null;
-
-    console.log('标签更新成功:', updatedTag);
-  } catch (error: any) {
-    console.error('更新标签失败:', error);
-    // 这里可以添加错误提示
-  }
-};
-
-const deleteTag = async (tag: Tag) => {
-  try {
-    await tagStorageService.deleteTag(tag.id);
-
-    const index = allTags.value.findIndex(t => t.id === tag.id);
-    if (index !== -1) {
-      allTags.value.splice(index, 1);
-    }
-
-    console.log('标签删除成功:', tag.name);
-  } catch (error: any) {
-    console.error('删除标签失败:', error);
-    // 这里可以添加错误提示
-  }
-};
-
-// AI 生成标签相关方法
-const generateAITags = async () => {
-  aiGenerating.value = true;
-  recommendedTags.value = [];
-  selectedRecommendedTags.value = [];
-  aiConfigError.value = '';
-
-  try {
-    // 使用传入的书签数据
-    const bookmarkData = props.bookmarks;
-
-    if (bookmarkData.length === 0) {
-      throw new Error('没有可用的书签数据');
-    }
-
-    // 获取 AI 设置
-    const aiSettings = await loadAISettings();
-
-    // 检查 AI 配置是否完整
-    if (!aiSettings.aiApiKey || !aiSettings.aiApiUrl) {
-      aiConfigError.value = 'AI 配置不完整，请在设置页面配置 API 地址和密钥';
-      return;
-    }
-
-    // 配置 AI 服务
-    aiService.setApiKey(aiSettings.aiApiKey);
-    aiService.setBaseUrl(aiSettings.aiApiUrl);
-    aiService.setModel(aiSettings.aiModel);
-
-    // 获取现有标签名称，避免重复
-    const existingTagNames = allTags.value.map(tag => tag.name);
-
-    // 调用 AI 服务生成标签
-    const generated = await aiService.generateTagsFromBookmarks(bookmarkData, existingTagNames);
-    recommendedTags.value = generated;
-  } catch (error: any) {
-    console.error('AI 生成标签失败:', error);
-
-    // 根据错误类型提供不同的处理
-    if (error.message.includes('没有可用的书签数据')) {
-      aiConfigError.value = '暂无书签数据可供分析';
-    } else if (error.message.includes('API密钥未设置') || error.message.includes('AI 配置不完整')) {
-      aiConfigError.value = '请先在设置页面配置 AI API 地址和密钥';
-    } else if (error.message.includes('API请求失败')) {
-      aiConfigError.value = 'AI 服务连接失败，请检查网络连接和 API 配置';
-    } else {
-      // 其他错误：提供默认推荐
-      const defaultRecommendations = ['工具', '学习', '开发', '设计', '文档', '资源', '社区', '新闻'];
-      const existingTagNames = allTags.value.map(tag => tag.name);
-      recommendedTags.value = defaultRecommendations.filter(tag => !existingTagNames.includes(tag));
-    }
-  } finally {
-    aiGenerating.value = false;
-  }
-};
-
-// 加载 AI 设置
-const loadAISettings = async () => {
-  try {
-    // 从本地存储加载设置（实际项目中应该从 chrome.storage 或其他存储服务获取）
-    const stored = localStorage.getItem('humi-settings');
-    if (stored) {
-      const settings = JSON.parse(stored);
-      return {
-        aiApiKey: settings.aiApiKey || '',
-        aiApiUrl: settings.aiApiUrl || 'https://api.openai.com/v1',
-        aiModel: settings.aiModel || 'gpt-3.5-turbo'
-      };
-    }
-
-    // 返回默认配置
-    return {
-      aiApiKey: '',
-      aiApiUrl: 'https://api.openai.com/v1',
-      aiModel: 'gpt-3.5-turbo'
-    };
-  } catch (error) {
-    console.error('加载 AI 设置失败:', error);
-    return {
-      aiApiKey: '',
-      aiApiUrl: 'https://api.openai.com/v1',
-      aiModel: 'gpt-3.5-turbo'
-    };
-  }
-};
-
-const regenerateAITags = async () => {
-  await generateAITags();
-};
-
-const retryAIGeneration = async () => {
-  aiConfigError.value = '';
-  await generateAITags();
-};
-
-// 根据ID获取书签
-const getBookmarkById = (id: string) => {
-  return props.bookmarks.find(bookmark => bookmark.id === id);
-};
-
-// AI 整理书签相关方法
-const startAIOrganize = async () => {
-  aiOrganizing.value = true;
-  organizeResult.value = null;
-  organizeConfigError.value = '';
-
-  // 初始化进度状态
-  organizeProgress.value = {
-    processed: 0,
-    total: props.bookmarks.length,
-    currentBatch: 0,
-    totalBatches: Math.ceil(props.bookmarks.length / 30), // 假设每批30个
-    batchSize: 30,
-    message: '正在初始化AI整理...'
-  };
-
-  try {
-    // 使用传入的书签数据
-    const bookmarkData = props.bookmarks;
-
-    if (bookmarkData.length === 0) {
-      throw new Error('没有可用的书签数据');
-    }
-
-    // 获取 AI 设置
-    const aiSettings = await loadAISettings();
-
-    // 检查 AI 配置是否完整
-    if (!aiSettings.aiApiKey || !aiSettings.aiApiUrl) {
-      organizeConfigError.value = 'AI 配置不完整，请在设置页面配置 API 地址和密钥';
-      return;
-    }
-
-    // 配置 AI 服务
-    aiService.setApiKey(aiSettings.aiApiKey);
-    aiService.setBaseUrl(aiSettings.aiApiUrl);
-    aiService.setModel(aiSettings.aiModel);
-
-    // 获取现有标签名称
-    const existingTagNames = allTags.value.map(tag => tag.name);
-
-    // 动态计算批次大小，确保不会因为书签过多而出错
-    const batchSize = bookmarkData.length > 100 ? 25 : 30;
-    const totalBatches = Math.ceil(bookmarkData.length / batchSize);
-
-    // 更新进度信息
-    organizeProgress.value.batchSize = batchSize;
-    organizeProgress.value.totalBatches = totalBatches;
-    organizeProgress.value.message = totalBatches > 1
-      ? `准备分批处理 ${bookmarkData.length} 个书签...`
-      : '正在分析书签内容...';
-
-    // 调用AI服务整理书签，传入进度回调
-    const result = await aiService.organizeBookmarksWithTags(
-      bookmarkData,
-      existingTagNames,
-      {
-        batchSize,
-        onProgress: (processed: number, total: number, currentBatch: number) => {
-          organizeProgress.value.processed = processed;
-          organizeProgress.value.total = total;
-          organizeProgress.value.currentBatch = currentBatch;
-
-          if (totalBatches > 1) {
-            organizeProgress.value.message = `正在处理第 ${currentBatch}/${totalBatches} 批书签...`;
-          } else {
-            organizeProgress.value.message = '正在分析书签并生成标签建议...';
-          }
-        }
-      }
-    );
-
-    // 进度完成
-    organizeProgress.value.message = '分析完成，正在生成整理预览...';
-
-    // 预处理结果：确保所有推荐的标签都不与现有标签重复
-    const filteredNewTags = result.newTags.filter(tagName =>
-      !existingTagNames.includes(tagName)
-    );
-
-    organizeResult.value = {
-      assignments: result.assignments,
-      newTags: filteredNewTags
-    };
-
-    organizeProgress.value.message = `整理完成！为 ${Object.keys(result.assignments).length} 个书签分配了标签`;
-
-  } catch (error: any) {
-    console.error('AI 整理书签失败:', error);
-
-    // 根据错误类型提供不同的处理
-    if (error.message.includes('没有可用的书签数据')) {
-      organizeConfigError.value = '暂无书签数据可供整理';
-    } else if (error.message.includes('API密钥未设置') || error.message.includes('AI 配置不完整')) {
-      organizeConfigError.value = '请先在设置页面配置 AI API 地址和密钥';
-    } else if (error.message.includes('API请求失败')) {
-      organizeConfigError.value = 'AI 服务连接失败，请检查网络连接和 API 配置';
-    } else {
-      organizeConfigError.value = `整理失败: ${error.message}`;
-    }
-  } finally {
-    aiOrganizing.value = false;
-  }
-};
-
-const retryAIOrganize = async () => {
-  organizeConfigError.value = '';
-  await startAIOrganize();
-};
-
-const confirmAIOrganize = async () => {
-  if (!organizeResult.value) return;
-
-  try {
-    const result = organizeResult.value; // 保存引用避免null检查问题
-
-    // 显示应用进度
-    organizeProgress.value.message = '正在应用整理结果...';
-    organizeProgress.value.processed = 0;
-    organizeProgress.value.total = Object.keys(result.assignments).length + result.newTags.length;
-
-    // 1. 创建新推荐的标签并保存到存储
-    organizeProgress.value.message = '正在创建新标签...';
-    const tagCreationResult = await tagStorageService.createTagsBatch(result.newTags);
-
-    // 更新本地状态
-    allTags.value.push(...tagCreationResult.created);
-
-    // 记录跳过的重复标签
-    if (tagCreationResult.skipped.length > 0) {
-      console.log(`跳过了 ${tagCreationResult.skipped.length} 个重复标签: ${tagCreationResult.skipped.join(', ')}`);
-    }
-
-    // 2. 创建标签名称到ID的映射
-    const tagNameToId = new Map<string, string>();
-    allTags.value.forEach(tag => {
-      tagNameToId.set(tag.name, tag.id);
-    });
-
-    // 3. 转换分配结果为标签ID格式
-    const assignmentsWithIds: { [bookmarkId: string]: string[] } = {};
-    Object.entries(result.assignments).forEach(([bookmarkId, tagNames]) => {
-      const tagIds = tagNames
-        .map(tagName => tagNameToId.get(tagName))
-        .filter((tagId): tagId is string => tagId !== undefined);
-
-      if (tagIds.length > 0) {
-        assignmentsWithIds[bookmarkId] = tagIds;
-      }
-    });
-
-    // 4. 批量分配标签到书签
-    organizeProgress.value.message = '正在应用标签分配...';
-    await tagStorageService.batchAssignTags(assignmentsWithIds);
-
-    // 5. 重新加载标签数据以更新使用计数
-    organizeProgress.value.message = '正在更新标签统计...';
-    await loadTags();
-
-    // 6. 记录统计信息
-    const totalAssigned = Object.keys(result.assignments).length;
-    const newTagsCount = tagCreationResult.created.length;
-    const skippedTagsCount = tagCreationResult.skipped.length;
-
-    // 7. 重置状态
-    showAIOrganize.value = false;
-    organizeResult.value = null;
-    organizeConfigError.value = '';
-
-    // 显示成功消息
-    let message = `🎉 整理完成！为 ${totalAssigned} 个书签分配了标签`;
-    if (newTagsCount > 0) {
-      message += `，新增了 ${newTagsCount} 个标签`;
-    }
-    if (skippedTagsCount > 0) {
-      message += `，跳过了 ${skippedTagsCount} 个重复标签`;
-    }
-
-    organizeProgress.value.message = message;
-
-    console.log(`AI 整理完成：为 ${totalAssigned} 个书签分配了标签，新增了 ${newTagsCount} 个标签，跳过了 ${skippedTagsCount} 个重复标签`);
-
-    // 可以添加toast通知或其他用户反馈
-    // toast.success(`整理完成！为 ${totalAssigned} 个书签分配了标签`);
-
-  } catch (error) {
-    console.error('确认整理失败:', error);
-    organizeConfigError.value = '应用整理结果失败，请重试';
-    organizeProgress.value.message = '应用整理结果时出现错误';
-  }
-};
-
-const toggleRecommendedTag = (tag: string) => {
-  const index = selectedRecommendedTags.value.indexOf(tag);
-  if (index > -1) {
-    selectedRecommendedTags.value.splice(index, 1);
-  } else {
-    selectedRecommendedTags.value.push(tag);
-  }
-};
-
-const selectAllRecommended = () => {
-  selectedRecommendedTags.value = [...recommendedTags.value];
-};
-
-const clearAllRecommended = () => {
-  selectedRecommendedTags.value = [];
-};
-
-const removeSelectedTag = (tag: string) => {
-  const index = selectedRecommendedTags.value.indexOf(tag);
-  if (index > -1) {
-    selectedRecommendedTags.value.splice(index, 1);
-  }
-};
-
-const confirmAITags = async () => {
-  try {
-    // 使用批量创建方法（带去重）
-    const result = await tagStorageService.createTagsBatch(selectedRecommendedTags.value);
-
-    // 添加到本地状态
-    allTags.value.push(...result.created);
-
-    // 重置状态
-    showAIGenerate.value = false;
-    recommendedTags.value = [];
-    selectedRecommendedTags.value = [];
-
-    // 显示结果反馈
-    if (result.created.length > 0) {
-      console.log(`成功创建了 ${result.created.length} 个标签`);
-    }
-
-    if (result.skipped.length > 0) {
-      console.log(`跳过了 ${result.skipped.length} 个重复标签: ${result.skipped.join(', ')}`);
-    }
-
-  } catch (error: any) {
-    console.error('创建AI推荐标签失败:', error);
-    // 这里可以添加错误提示
-  }
-};
-
-// 去重标签 - 执行去重操作
-const performDeduplication = async () => {
-  deduplicateState.value.isDeduplicating = true;
-  
-  try {
-    const result = await tagStorageService.deduplicateTags();
-    
-    // 重新加载标签数据
-    await loadTags();
-    
-    // 保存结果并显示结果对话框
-    deduplicateState.value.result = result;
-    deduplicateState.value.showConfirmDialog = false;
-    deduplicateState.value.showResultDialog = true;
-    
-  } catch (error) {
-    console.error('去重标签失败:', error);
-    // 这里可以添加错误提示
-  } finally {
-    deduplicateState.value.isDeduplicating = false;
-  }
-};
-
-// 标签操作方法
-const selectTag = async (tag: Tag) => {
-  // 如果增强书签为空，先加载标签
-  if (enhancedBookmarks.value.length === 0 && props.bookmarks.length > 0) {
-    await loadBookmarkTags();
-  }
-  
-  selectedTag.value = tag.name;
-  showTagBookmarks.value = true;
-};
-
-const clearTagSelection = () => {
-  selectedTag.value = null;
-  showTagBookmarks.value = false;
-};
-
-// 计算属性 - 筛选后的书签
+// 过滤后的书签
 const filteredBookmarks = computed(() => {
-  const tagName = selectedTag.value;
-  if (!tagName) return [];
+  if (!selectedTagName.value) return [];
   
-  // 使用增强后的书签数据进行筛选
-  const booksToFilter = bookmarksWithTags.value;
-  
-  return booksToFilter.filter(bookmark => {
+  return props.bookmarks.filter(bookmark => {
     const hasTags = bookmark.tags && Array.isArray(bookmark.tags) && bookmark.tags.length > 0;
-    return hasTags && bookmark.tags!.includes(tagName);
+    return hasTags && bookmark.tags!.includes(selectedTagName.value);
   });
 });
 
-// 计算属性 - 增强的书签数据（包含标签）
-const bookmarksWithTags = computed(() => {
-  // 优先使用增强后的书签数据，如果为空则使用原始数据
-  return enhancedBookmarks.value.length > 0 ? enhancedBookmarks.value : props.bookmarks;
-});
+// 事件处理函数
+const openCreateTagDialog = () => {
+  dialogs.showCreateTag = true;
+};
 
-// 加载标签数据
-const loadTags = async () => {
-  try {
-    const tags = await tagStorageService.getAllTags();
-    allTags.value = tags;
-    console.log(`加载了 ${tags.length} 个标签`);
-  } catch (error) {
-    console.error('加载标签失败:', error);
-    allTags.value = [];
+const openEditTagDialog = (tag: Tag) => {
+  editingTag.value = tag;
+  dialogs.showEditTag = true;
+};
+
+const openAIGenerateDialog = () => {
+  dialogs.showAIGenerate = true;
+};
+
+const openAIOrganizeDialog = () => {
+  dialogs.showAIOrganize = true;
+};
+
+const openDeduplicateDialog = () => {
+  deduplication.openConfirmDialog();
+};
+
+const handleCreateTag = async (tagData: Omit<Tag, 'id' | 'createdAt'>) => {
+  await tagsHook.createTag(tagData);
+  dialogs.showCreateTag = false;
+};
+
+const handleUpdateTag = async (tagData: Partial<Tag>) => {
+  if (editingTag.value) {
+    await tagsHook.updateTag(editingTag.value.id, tagData);
+    dialogs.showEditTag = false;
+    editingTag.value = null;
   }
 };
 
-// 为书签加载标签
-const loadBookmarkTags = async () => {
-  try {
-    // 为每个书签加载标签
-    const bookmarksWithLoadedTags = await Promise.all(
-      props.bookmarks.map(async (bookmark) => {
-        const tags = await tagStorageService.getTagsForBookmark(bookmark.id);
-        return {
-          ...bookmark,
-          tags: tags.map(tag => tag.name) // 只存储标签名称
-        };
-      })
-    );
-    
-    enhancedBookmarks.value = bookmarksWithLoadedTags;
-    
-  } catch (error) {
-    console.error('为书签加载标签失败:', error);
-  }
+const handleDeleteTag = async (tag: Tag) => {
+  await tagsHook.deleteTag(tag.id);
 };
 
-// 监听书签数据变化，重新加载标签
-watch(() => props.bookmarks, async (newBookmarks) => {
-  if (newBookmarks && newBookmarks.length > 0) {
-    await loadBookmarkTags();
+const handleAIGeneratedTags = async (tags: string[]) => {
+  // 批量创建AI生成的标签
+  for (const tagName of tags) {
+    const color = getRandomColor();
+    await tagsHook.createTag({ name: tagName, color, usage: 0 });
   }
-}, { immediate: true });
+  dialogs.showAIGenerate = false;
+};
 
-onMounted(async () => {
-  await loadTags();
-  if (props.bookmarks.length > 0) {
-    await loadBookmarkTags();
-  }
-});
+const handleAIOrganizeResult = async (result: any) => {
+  await tagOrganizerHook.confirmAIOrganize(result);
+  dialogs.showAIOrganize = false;
+  await tagsHook.refreshTags();
+};
+
+const handleDeduplicate = async () => {
+  await deduplication.performDeduplication();
+  await tagsHook.refreshTags();
+};
+
+const selectTag = (tag: Tag) => {
+  selectedTagName.value = tag.name;
+};
+
+const clearTagSelection = () => {
+  selectedTagName.value = null;
+};
+
+// 工具函数
+const getRandomColor = () => {
+  const colors = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+    '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
+    '#f97316', '#6366f1', '#14b8a6', '#e11d48'
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
+// 监听书签变化
+watch(() => props.bookmarks, () => {
+  tagsHook.loadBookmarkTags(props.bookmarks);
+}, { deep: true });
 </script>
+
+<style scoped>
+/* 样式已经在组件中定义 */
+</style>
