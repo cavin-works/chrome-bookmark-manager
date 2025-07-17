@@ -10,7 +10,7 @@
           让 AI 智能分析您的书签内容，自动为其分配合适的标签，实现书签的智能分类管理
           <br>
           <span class="text-sm text-muted-foreground">
-            待整理书签数量: {{ bookmarks.filter(b => !b.tags || b.tags.length === 0).length }} 个
+            待整理无标签书签: {{ (bookmarks || []).filter(b => !b.tags || b.tags.length === 0).length }} 个
           </span>
         </DialogDescription>
       </DialogHeader>
@@ -46,7 +46,7 @@
           </div>
 
           <!-- 预览结果 -->
-          <div v-else-if="results.length > 0" class="space-y-4">
+          <div v-else-if="(results || []).length > 0" class="space-y-4">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold">整理预览</h3>
               <div class="flex items-center space-x-2">
@@ -92,7 +92,7 @@
             <div class="p-3 bg-blue-50 rounded-lg">
               <h4 class="text-sm font-medium text-blue-900 mb-2">整理统计</h4>
               <div class="grid grid-cols-2 gap-2 text-sm text-blue-700">
-                <div>已整理书签: <span class="font-semibold">{{ results.length }}</span></div>
+                <div>已整理书签: <span class="font-semibold">{{ (results || []).length }}</span></div>
                 <div>新增标签: <span class="font-semibold">{{ newTagsCount }}</span></div>
                 <div>使用现有标签: <span class="font-semibold">{{ existingTagsCount }}</span></div>
                 <div>平均标签数: <span class="font-semibold">{{ averageTagsPerBookmark.toFixed(1) }}</span></div>
@@ -128,12 +128,12 @@
               AI 将分析每个书签的内容，并为其分配合适的标签
             </p>
             <div class="space-y-2">
-              <Button @click="startOrganization" :disabled="bookmarks.length === 0">
+              <Button @click="startOrganization" :disabled="(bookmarks || []).filter(b => !b.tags || b.tags.length === 0).length === 0">
                 <Bot class="w-4 h-4 mr-2" />
                 开始整理
               </Button>
               <p class="text-sm text-gray-400">
-                可整理书签: {{ bookmarks.filter(b => !b.tags || b.tags.length === 0).length }} 个
+                可整理无标签书签: {{ (bookmarks || []).filter(b => !b.tags || b.tags.length === 0).length }} 个
               </p>
             </div>
           </div>
@@ -144,7 +144,7 @@
         <div class="flex items-center justify-between w-full">
           <div class="flex items-center space-x-2">
             <Button
-              v-if="results.length > 0"
+              v-if="(results || []).length > 0"
               @click="startOrganization"
               variant="outline"
               :disabled="isProcessing"
@@ -159,9 +159,9 @@
             </Button>
             <Button
               @click="confirm"
-              :disabled="results.length === 0 || isProcessing"
+              :disabled="(results || []).length === 0 || isProcessing"
             >
-              确认应用 ({{ results.length }}个书签)
+              确认应用 ({{ (results || []).length }}个书签)
             </Button>
           </div>
         </div>
@@ -210,19 +210,19 @@ const {
 
 // 计算属性
 const newTagsCount = computed(() => {
-  const allSuggestedTags = results.value.flatMap(r => r.suggestedTags);
+  const allSuggestedTags = (results.value || []).flatMap(r => r.suggestedTags || []);
   return allSuggestedTags.filter(tag => !props.existingTags.includes(tag)).length;
 });
 
 const existingTagsCount = computed(() => {
-  const allSuggestedTags = results.value.flatMap(r => r.suggestedTags);
+  const allSuggestedTags = (results.value || []).flatMap(r => r.suggestedTags || []);
   return allSuggestedTags.filter(tag => props.existingTags.includes(tag)).length;
 });
 
 const averageTagsPerBookmark = computed(() => {
-  if (results.value.length === 0) return 0;
-  const totalTags = results.value.reduce((sum, r) => sum + r.suggestedTags.length, 0);
-  return totalTags / results.value.length;
+  if (!(results.value || []).length) return 0;
+  const totalTags = (results.value || []).reduce((sum, r) => sum + (r.suggestedTags || []).length, 0);
+  return totalTags / (results.value || []).length;
 });
 
 // 事件处理

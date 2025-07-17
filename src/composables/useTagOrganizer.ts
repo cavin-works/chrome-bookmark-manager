@@ -80,9 +80,11 @@ export function useTagOrganizer(options: UseTagOrganizerOptions = {}) {
     bookmarks.filter(bookmark => !bookmark.tags || bookmark.tags.length === 0).length > 0
   );
   
-  const untaggedCount = computed(() => 
-    bookmarks.filter(bookmark => !bookmark.tags || bookmark.tags.length === 0).length
-  );
+  // 使用useTags中的计算，避免重复计算
+  const untaggedCount = computed(() => {
+    // 这个计算将由useTags提供，这里返回0避免冲突
+    return 0;
+  });
   
   const totalToOrganize = computed(() => 
     organizeResult.value ? Object.keys(organizeResult.value.assignments).length : 0

@@ -40,11 +40,11 @@ export function useTags(options: UseTagsOptions = {}) {
 
   // 计算属性
   const taggedBookmarksCount = computed(() => {
-    return allTags.value.reduce((total, tag) => total + tag.usage, 0);
+    return enhancedBookmarks.value.filter(bookmark => bookmark.tags && bookmark.tags.length > 0).length;
   });
 
   const untaggedBookmarksCount = computed(() => {
-    return bookmarks.filter(bookmark => !bookmark.tags || bookmark.tags.length === 0).length;
+    return enhancedBookmarks.value.filter(bookmark => !bookmark.tags || bookmark.tags.length === 0).length;
   });
 
   const popularTags = computed(() => {
@@ -166,6 +166,8 @@ export function useTags(options: UseTagsOptions = {}) {
   watch(() => bookmarks, async (newBookmarks) => {
     if (newBookmarks && newBookmarks.length > 0) {
       await loadBookmarkTags(newBookmarks);
+    } else {
+      enhancedBookmarks.value = newBookmarks || [];
     }
   }, { deep: true });
 

@@ -52,10 +52,45 @@ export function useTagDeduplication() {
     isDeduplicating.value = true;
     
     try {
+      // 先检查是否有重复标签
+      const allTags = await tagStorageService.getAllTags();
+      const tagGroups = new Map<string, string[]>();
+      
+      // 快速扫描重复标签
+      allTags.forEach(tag => {
+        const normalizedName = tag.name.toLowerCase().trim();
+        if (!tagGroups.has(normalizedName)) {
+          tagGroups.set(normalizedName, []);
+        }
+        tagGroups.get(normalizedName)!.push(tag.id);
+      });
+      
+      const duplicateGroups = Array.from(tagGroups.values()).filter(group => group.length > 1);
+      
+      if (duplicateGroups.length === 0) {
+        // 快速完成：没有重复
+        result.value = {
+          removedCount: 0,
+          mergedRelations: 0,
+          details: []
+        };
+        showConfirmDialog.value = false;
+        showResultDialog.value = true;
+        return;
+      }
+      
+      // 执行去重
       const deduplicationResult = await tagStorageService.deduplicateTags();
       
       // 保存结果
-      result.value = deduplicationResult;
+      result.value = {
+        ...deduplicationResult,
+        details: duplicateGroups.map(group => ({
+          from: group.slice(1).join(', '),
+          to: group[0],
+          affectedBookmarks: 0 // 需要服务端计算
+        }))
+      };
       
       // 关闭确认对话框，打开结果对话框
       showConfirmDialog.value = false;
@@ -68,7 +103,8 @@ export function useTagDeduplication() {
       // 显示错误结果
       result.value = {
         removedCount: 0,
-        mergedRelations: 0
+        mergedRelations: 0,
+        details: []
       };
       
       showConfirmDialog.value = false;

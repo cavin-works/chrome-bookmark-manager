@@ -10,9 +10,10 @@
         variant="outline" 
         size="sm" 
         :disabled="!canDeduplicate || isDeduplicating"
+        :title="isDeduplicating ? '正在处理中...' : '自动检测并合并重复标签'"
       >
         <RefreshCw :class="['w-4 h-4 mr-2', isDeduplicating ? 'animate-spin' : '']" />
-        {{ isDeduplicating ? '正在去重...' : '去重标签' }}
+        {{ isDeduplicating ? '去重中...' : '一键去重' }}
       </Button>
       
       <Button 

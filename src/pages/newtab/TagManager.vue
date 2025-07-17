@@ -5,7 +5,7 @@
       :can-deduplicate="allTags.length > 0"
       :is-deduplicating="deduplication.isDeduplicating"
       :can-organize="true"
-      :untagged-count="untaggedCount"
+      :untagged-count="untaggedBookmarksCount"
       @deduplicate="openDeduplicateDialog"
       @ai-organize="openAIOrganizeDialog"
       @ai-generate="openAIGenerateDialog"
@@ -16,7 +16,7 @@
     <TagStatistics
       :total-tags="allTags.length"
       :tagged-bookmarks-count="taggedBookmarksCount"
-      :untagged-bookmarks-count="untaggedCount"
+      :untagged-bookmarks-count="untaggedBookmarksCount"
       :popular-tags-count="popularTags.length"
     />
 
@@ -96,7 +96,7 @@
     <!-- 去重标签确认对话框 -->
     <DeduplicateConfirmDialog
       v-model:open="deduplication.showConfirmDialog"
-      @confirm="handleDeduplicate"
+      @confirm="deduplication.performDeduplication"
     />
 
     <!-- 去重结果对话框 -->
@@ -180,8 +180,7 @@ const tagOrganizerHook = useTagOrganizer({
 const deduplication = useTagDeduplication();
 
 // 计算属性
-const { allTags, taggedBookmarksCount, popularTags } = tagsHook;
-const { untaggedCount } = tagOrganizerHook;
+const { allTags, taggedBookmarksCount, popularTags, untaggedBookmarksCount } = tagsHook;
 
 // 过滤后的标签
 const filteredTags = computed(() => {
@@ -253,9 +252,8 @@ const handleAIOrganizeResult = async (result: any) => {
   await tagsHook.refreshTags();
 };
 
-const handleDeduplicate = async () => {
-  await deduplication.performDeduplication();
-  await tagsHook.refreshTags();
+const handleDeduplicate = () => {
+  deduplication.openConfirmDialog();
 };
 
 const selectTag = (tag: Tag) => {
